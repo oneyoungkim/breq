@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BREQ Logo Preview</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #111318;
+        --paper: #f7f5f0;
+        --blue: #145cff;
+        --line: #d8d5ce;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      main {
+        width: min(1120px, calc(100vw - 48px));
+        margin: 0 auto;
+        padding: 56px 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 24px;
+        align-items: stretch;
+      }
+
+      .panel {
+        display: grid;
+        align-items: center;
+        min-height: 280px;
+        border: 1px solid var(--line);
+        padding: 32px;
+      }
+
+      .panel.dark {
+        background: var(--ink);
+      }
+
+      .logo {
+        width: min(100%, 760px);
+        height: auto;
+      }
+
+      .icon {
+        width: min(100%, 260px);
+        height: auto;
+        justify-self: center;
+      }
+
+      .concept {
+        width: min(100%, 760px);
+        height: auto;
+      }
+
+      .scale {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid var(--line);
+      }
+
+      .scale img:nth-child(1) {
+        width: 180px;
+      }
+
+      .scale img:nth-child(2) {
+        width: 120px;
+      }
+
+      .scale img:nth-child(3) {
+        width: 64px;
+      }
+
+      .scale img:nth-child(4) {
+        width: 32px;
+      }
+
+      h1 {
+        margin: 0 0 20px;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 18px 0 0;
+        max-width: 680px;
+        color: #41444a;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      @media (max-width: 860px) {
+        main {
+          width: min(100vw - 32px, 640px);
+          padding: 32px 0;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>BREQ Logo System</h1>
+      <div class="grid">
+        <section class="panel">
+          <img class="concept" src="./breq-logo-concept.png" alt="BREQ generated concept" />
+        </section>
+        <section class="panel dark">
+          <img class="logo" src="./breq-logo-dark.svg" alt="BREQ logo dark" />
+        </section>
+        <section class="panel">
+          <img class="logo" src="./breq-logo.svg" alt="BREQ logo" />
+        </section>
+        <section class="panel">
+          <img class="icon" src="./breq-icon.svg" alt="BREQ icon" />
+        </section>
+      </div>
+      <div class="scale" aria-label="Small size checks">
+        <img src="./breq-logo.svg" alt="" />
+        <img src="./breq-logo.svg" alt="" />
+        <img src="./breq-icon.svg" alt="" />
+        <img src="./breq-icon.svg" alt="" />
+      </div>
+      <p>
+        The blue slash acts as a restrained pace mark:
+        Best Run Ever Quest, not the fastest run, but the run that returns to your own pace.
+      </p>
+    </main>
+  </body>
+</html>

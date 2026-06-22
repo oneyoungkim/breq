@@ -1,0 +1,22 @@
+<svg width="760" height="180" viewBox="0 0 760 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">BREQ technical logo</title>
+  <desc id="desc">BREQ geometric wordmark with an electric-blue route line integrated into the Q.</desc>
+  <g stroke="#111318" stroke-width="18" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M60 38V142" />
+    <path d="M60 38H105C125 38 138 49 138 65C138 81 125 91 105 91H60" />
+    <path d="M60 91H111C133 91 147 101 147 117C147 133 133 142 111 142H60" />
+
+    <path d="M205 142V38H252C277 38 293 51 293 72C293 94 277 106 252 106H205" />
+    <path d="M247 106L298 142" />
+
+    <path d="M356 38V142" />
+    <path d="M356 38H438" />
+    <path d="M356 90H424" />
+    <path d="M356 142H438" />
+
+    <path d="M552 38H616C642 38 660 56 660 83V97C660 124 642 142 616 142H552C526 142 508 124 508 97V83C508 56 526 38 552 38Z" />
+  </g>
+  <path d="M590 86C610 86 626 97 626 113C626 126 616 136 600 141C590 144 579 145 566 145" stroke="#145CFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M621 134L664 154" stroke="#145CFF" stroke-width="10" stroke-linecap="round" />
+  <circle cx="566" cy="145" r="5" fill="#145CFF" />
+</svg>

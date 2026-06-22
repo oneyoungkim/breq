@@ -1,0 +1,16 @@
+{
+  "name": "BREQ — Best Run Ever Quest",
+  "short_name": "BREQ",
+  "description": "페이스를 존중하는 러닝. 기록하고, 해석받고, 인증한다.",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E0F12",
+  "theme_color": "#0E0F12",
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,15 @@
+<svg width="920" height="260" viewBox="0 0 920 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">BREQ logo dark</title>
+  <desc id="desc">BREQ sports-tech wordmark for dark backgrounds with a restrained electric-blue breath mark.</desc>
+  <rect width="920" height="260" fill="#111318" />
+  <defs>
+    <mask id="breq-word">
+      <rect width="920" height="260" fill="black" />
+      <text x="78" y="180" transform="skewX(-10 78 180)" fill="white" font-family="Impact, Haettenschweiler, 'Arial Black', sans-serif" font-size="178" font-weight="900" letter-spacing="-5">BREQ</text>
+      <polygon points="356,78 389,78 365,185 332,185" fill="black" />
+      <polygon points="650,78 683,78 659,185 626,185" fill="black" />
+    </mask>
+  </defs>
+  <rect width="920" height="260" fill="#F7F5F0" mask="url(#breq-word)" />
+  <polygon points="450,111 475,111 455,186 430,186" fill="#145CFF" />
+</svg>

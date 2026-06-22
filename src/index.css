@@ -1,0 +1,261 @@
+@import "tailwindcss";
+
+@theme {
+  /* Minimal urban runner club: concrete, ink, cobalt route accents */
+  --color-bg: #f5f6f1;
+  --color-card: #ffffff;
+  --color-card2: #eceff3;
+  --color-line: #d9dee7;
+  --color-ink: #101114;
+  --color-paper: #ffffff;
+  --color-brand: #173f9f;
+  --color-mint: #0b8f6a;
+  --color-sky: #1b64d8;
+  --color-viol: #7b45d8;
+  --color-amber: #ff8a1f;
+  --color-route: #173f9f;
+  --color-mute: #69707d;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI",
+    "Malgun Gothic", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo,
+    monospace;
+  /* 날렵한 모서리 — 전역 곡률 토큰 재정의 */
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 6px;
+  --radius-3xl: 8px;
+}
+
+html,
+body {
+  background: #111318;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+  color: #17171a;
+}
+
+/* 전역 필름 그레인 — 콘크리트/아스팔트 질감 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.25;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.urban-grid {
+  background-image:
+    linear-gradient(90deg, rgba(16, 17, 20, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(16, 17, 20, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.club-shadow {
+  box-shadow: 0 16px 36px rgba(16, 17, 20, 0.14);
+}
+
+.route-glow {
+  filter: drop-shadow(0 0 16px rgba(23, 63, 159, 0.34));
+}
+
+/* WHOOP풍 데이터 라벨 — 모노스페이스로 테크 감성 */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-mute);
+}
+
+.font-mono,
+.mono {
+  font-family: var(--font-mono);
+}
+
+.font-hand {
+  font-family: 'Nothing You Could Do', cursive;
+}
+
+/* 마퀴 — 흐르는 텍스트 */
+.marquee {
+  display: flex;
+  overflow: hidden;
+  user-select: none;
+}
+.marquee-track {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0;
+  white-space: nowrap;
+  animation: marquee 22s linear infinite;
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* BREQ 로고 — GPS 루트 라인이 그려지며 목적지로 수렴 */
+.breq-trace {
+  animation: breqTrace 1.3s cubic-bezier(0.4, 0, 0.15, 1) forwards;
+}
+@keyframes breqTrace {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.breq-dot {
+  opacity: 0;
+  animation: breqDotPop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) 1.2s forwards;
+}
+.breq-dot-ring {
+  opacity: 0;
+  animation: breqDotPop 0.5s ease-out 1.3s forwards;
+}
+@keyframes breqDotPop {
+  to {
+    opacity: 1;
+  }
+}
+
+/* 로고만 센터로 쾅! 떨어지고, 착지 순간 강하게 짓눌렸다(squash) 튕긴다 */
+.logo-drop {
+  animation: logoDrop 0.92s cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+@keyframes logoDrop {
+  0% {
+    transform: translateY(-118vh) scale(1.55) rotate(-8deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  /* 착지 순간 — 강한 squash로 충격 표현 */
+  48% {
+    transform: translateY(0) scale(1.22, 0.78) rotate(0deg);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+  /* 반동으로 튕겨 오르며 stretch */
+  60% {
+    transform: translateY(-44px) scale(0.9, 1.12);
+  }
+  72% {
+    transform: translateY(0) scale(1.08, 0.92);
+  }
+  83% {
+    transform: translateY(-13px) scale(0.98, 1.03);
+  }
+  93% {
+    transform: translateY(0) scale(1.02, 0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 추운 날 열기 — BREQ 타이포 수증기 */
+.steam-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(23, 63, 159, 0.6);
+  filter: blur(7px);
+  pointer-events: none;
+  will-change: transform, opacity;
+  opacity: 0;
+  animation-name: steamPuff;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  animation-duration: var(--sdur, 3s);
+  animation-delay: var(--sdel, 0s);
+}
+@keyframes steamPuff {
+  0% {
+    opacity: 0;
+    transform: translateY(0) translateX(0) scale(0.45);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-80px) translateX(var(--sdrift, 0px)) scale(3);
+  }
+}
+
+/* 단어 단위 리빌 — 클립 슬라이드업 */
+.word-inner {
+  display: inline-block;
+  transform: translateY(108%);
+  animation: wordUp 0.52s cubic-bezier(0.15, 0.7, 0.2, 1) forwards;
+}
+@keyframes wordUp {
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 인트로 애니메이션 */
+.intro-rise {
+  opacity: 0;
+  animation: introRise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+@keyframes introRise {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.intro-fade {
+  opacity: 0;
+  animation: introFade 0.9s ease-out forwards;
+}
+@keyframes introFade {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.pace-line {
+  width: 6%;
+  animation: paceDraw 2.6s forwards;
+}
+@keyframes paceDraw {
+  from {
+    width: 6%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

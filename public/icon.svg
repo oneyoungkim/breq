@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0E0F12"/>
+  <polyline points="78,330 158,288 238,348 318,250 398,300"
+    fill="none" stroke="#2E5BFF" stroke-opacity="0.5" stroke-width="10"
+    stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="248" y="232" text-anchor="middle"
+    font-family="'Pretendard Variable', Pretendard, -apple-system, 'Segoe UI', sans-serif"
+    font-weight="900" font-size="150" letter-spacing="-6" fill="#FFFFFF">BREQ</text>
+  <circle cx="430" cy="232" r="20" fill="#2E5BFF"/>
+</svg>

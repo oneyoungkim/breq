@@ -1,0 +1,15 @@
+# deps & build (재설치/재생성 — 절대 옮기지 말 것)
+node_modules/
+dist/
+
+# Capacitor 네이티브 (맥에서 `npx cap add ios`로 생성)
+ios/
+android/
+
+# 로컬/임시
+*.log
+npm-debug.log*
+.DS_Store
+.env
+.env.local
+*.b64

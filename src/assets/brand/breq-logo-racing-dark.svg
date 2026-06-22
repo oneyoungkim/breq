@@ -1,0 +1,17 @@
+<svg width="760" height="260" viewBox="0 0 760 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">BREQ racing logo dark</title>
+  <desc id="desc">A fast italic BREQ wordmark for dark backgrounds with a restrained electric-blue pace slash.</desc>
+  <rect width="760" height="260" fill="#111318" />
+  <style>
+    .word {
+      fill: #F7F5F0;
+      font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+      font-size: 164px;
+      font-style: italic;
+      font-weight: 900;
+      letter-spacing: -11px;
+    }
+  </style>
+  <text class="word" x="60" y="175">BREQ</text>
+  <path d="M500 96L475 175" stroke="#145CFF" stroke-width="13" stroke-linecap="butt" />
+</svg>

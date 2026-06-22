@@ -1,0 +1,14 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">BREQ app icon</title>
+  <desc id="desc">A bold Q mark with an electric-blue breath mark.</desc>
+  <rect width="1024" height="1024" rx="104" fill="#F7F5F0" />
+  <defs>
+    <mask id="q-mark">
+      <rect width="1024" height="1024" fill="black" />
+      <text x="206" y="756" transform="skewX(-8 206 756)" fill="white" font-family="Impact, Haettenschweiler, 'Arial Black', sans-serif" font-size="670" font-weight="900">Q</text>
+      <polygon points="454,330 540,330 490,560 404,560" fill="black" />
+    </mask>
+  </defs>
+  <rect width="1024" height="1024" fill="#111318" mask="url(#q-mark)" />
+  <polygon points="472,358 548,358 496,548 420,548" fill="#145CFF" />
+</svg>
