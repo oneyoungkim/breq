@@ -1,33 +1,29 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GeoPoint, Profile, RunRecord } from '../types'
 import { fmtPace } from '../logic'
 import { fmtClock, saveAppRun } from '../runs'
 import { Chip, inputCls, Tag } from '../components/ui'
 import RoutePath from '../components/RoutePath'
+import { GpsKalman, haversine, trackDistanceKm } from '../gps'
+import { getLocationProvider, type Fix, type LocationWatch } from '../location'
 
 type Phase = 'ready' | 'run' | 'pause' | 'done'
 
 const gpsSupported = typeof navigator !== 'undefined' && 'geolocation' in navigator
 
-// 정확도 튜닝 상수
-const ACC_MAX = 40 // 이보다 정확도 나쁜 fix는 거리 계산에서 제외(m)
-const MAX_SPEED = 12.5 // 러닝 상한 속도(m/s) — 초과 시 순간이동으로 간주
+// 정밀도 튜닝 상수
+const ACC_MAX = 25 // 이보다 정확도 나쁜 fix는 폐기(m) — 잡음 차단
+const ACC_ANCHOR = 18 // 출발 기준점은 이 정확도 이내일 때만 확정(안정화 게이트)
+const MAX_SPEED = 12.5 // 러닝 상한 속도(m/s) — 초과 시 순간이동(신호 튐)으로 간주
+const KALMAN_Q = 3 // 칼만 프로세스 노이즈(m/s) — 러닝 보행 속도대
 const PACE_WINDOW_MS = 15000 // 현재 페이스 롤링 창
-
-/** 두 좌표 사이 거리(m) */
-function haversine(aLat: number, aLng: number, bLat: number, bLng: number) {
-  const R = 6371000
-  const toRad = (d: number) => (d * Math.PI) / 180
-  const dLat = toRad(bLat - aLat)
-  const dLng = toRad(bLng - aLng)
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2
-  return 2 * R * Math.asin(Math.sqrt(s))
-}
 
 const hhmm = (d: Date) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+
+/** 정확도(m) → 신호 품질 라벨 */
+const gpsQuality = (acc: number | null) =>
+  acc == null ? '—' : acc <= 8 ? '정밀' : acc <= 15 ? '양호' : '보통'
 
 export default function RunTracker({
   profile,
@@ -49,6 +45,7 @@ export default function RunTracker({
   const [gpsErr, setGpsErr] = useState<string | null>(null)
   const [accuracy, setAccuracy] = useState<number | null>(null)
   const [fixes, setFixes] = useState(0)
+  const [locked, setLocked] = useState(false) // 출발 기준점 확정 여부(신호 안정화)
 
   const lastAccepted = useRef<GeoPoint | null>(null)
   const trackRef = useRef<GeoPoint[]>([])
@@ -57,8 +54,14 @@ export default function RunTracker({
   const lastSplitAt = useRef(0)
   const simTime = useRef(0)
   const startedAt = useRef('')
+  const kalman = useRef(new GpsKalman(KALMAN_Q))
+  const anchored = useRef(false) // 거리 적산 시작했는지
+  const reanchor = useRef(false) // 일시정지→재개 직후 1회: 유령 거리 방지
+  const elapsedBase = useRef(0) // 일시정지까지 누적 경과(초)
+  const segStart = useRef(0) // 현재 측정 구간 시작(epoch ms)
 
   const secure = typeof window !== 'undefined' && window.isSecureContext
+  const nativeGps = getLocationProvider().isNative
 
   // ── 시뮬레이션 모드 ──
   useEffect(() => {
@@ -76,68 +79,107 @@ export default function RunTracker({
     return () => clearInterval(id)
   }, [phase, useSim, profile.paceSec])
 
-  // ── 실제 GPS 모드: 1초 경과 타이머 ──
+  // ── 실제 GPS 모드: 경과 타이머 (벽시계 기반 — 백그라운드 throttle에도 정확) ──
   useEffect(() => {
     if (phase !== 'run' || useSim) return
-    const id = setInterval(() => setElapsed((e) => e + 1), 1000)
-    return () => clearInterval(id)
+    segStart.current = Date.now()
+    const tick = () => setElapsed(elapsedBase.current + (Date.now() - segStart.current) / 1000)
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => {
+      // 구간 종료(일시정지/종료) 시 누적에 반영
+      elapsedBase.current += (Date.now() - segStart.current) / 1000
+      clearInterval(id)
+    }
   }, [phase, useSim])
 
-  // ── 실제 GPS 모드: 위치 추적 ──
+  // ── 위치 한 점(fix) 처리: 칼만 보정 → 게이트 → 거리·페이스 적산 ──
+  const handleFix = useCallback((f: Fix) => {
+    const acc = f.acc
+    setAccuracy(acc)
+    setFixes((n) => n + 1)
+    // 좌표 유효성 + 정확도 게이트(나쁜 fix 폐기)
+    if (!Number.isFinite(f.lat) || !Number.isFinite(f.lng)) return
+    if (acc > ACC_MAX) return
+
+    // 칼만 필터로 잡음 제거 → 보정된 위치/정확도 사용
+    const k = kalman.current.process(f.lat, f.lng, acc, f.t)
+    const fAcc = Math.min(kalman.current.accuracy, acc)
+    const p: GeoPoint = {
+      lat: k.lat,
+      lng: k.lng,
+      t: f.t,
+      acc: Math.round(fAcc),
+      alt: f.alt,
+    }
+
+    // 일시정지→재개 직후 1회: 기준점만 다시 잡고 거리 적산은 건너뜀(유령 거리 방지).
+    // brk 표시로 경로/거리 재계산 시 정지 갭을 분절 처리.
+    if (reanchor.current) {
+      reanchor.current = false
+      lastAccepted.current = p
+      trackRef.current.push({ ...p, brk: true })
+      return
+    }
+
+    // 출발 안정화: 정확도 좋은 fix가 들어와야 비로소 기준점 확정
+    if (!anchored.current) {
+      if (acc <= ACC_ANCHOR) {
+        anchored.current = true
+        setLocked(true)
+        lastAccepted.current = p
+        trackRef.current.push(p)
+      }
+      return
+    }
+
+    const prev = lastAccepted.current!
+    const d = haversine(prev.lat, prev.lng, p.lat, p.lng) // m
+    const dt = Math.max((p.t - prev.t) / 1000, 0.001)
+    // 제자리 지터 차단: 이동이 (보정 정확도의 절반, 최소 3m)보다 작으면 적산 보류.
+    // 기준점을 갱신하지 않으므로 느린 러너의 이동도 여러 fix에 걸쳐 누적된다.
+    if (d < Math.max(fAcc * 0.5, 3)) return
+    // 순간이동(터널/신호 튐) 차단 — 기준점만 옮기고 거리 미반영
+    if (d / dt > MAX_SPEED) {
+      lastAccepted.current = p
+      return
+    }
+    distRef.current += d / 1000
+    setDist(distRef.current)
+    lastAccepted.current = p
+    trackRef.current.push(p)
+    // 현재 페이스 — 최근 15초 구간으로 산출(단일 fix 흔들림 방지)
+    paceWin.current.push({ t: p.t, d: distRef.current })
+    while (paceWin.current.length > 1 && p.t - paceWin.current[0].t > PACE_WINDOW_MS) {
+      paceWin.current.shift()
+    }
+    const w0 = paceWin.current[0]
+    const dd = distRef.current - w0.d
+    const ddt = (p.t - w0.t) / 1000
+    if (dd > 0.012) setCurPace(ddt / dd)
+  }, [])
+
+  // ── 실제 GPS 모드: 위치 추적 (웹=foreground / 네이티브=백그라운드 지속) ──
   useEffect(() => {
     if (phase !== 'run' || useSim) return
-    if (!gpsSupported) {
+    if (!gpsSupported && !nativeGps) {
       setUseSim(true)
       return
     }
-    const id = navigator.geolocation.watchPosition(
-      (pos) => {
-        const c = pos.coords
-        const acc = c.accuracy ?? 999
-        setAccuracy(acc)
-        setFixes((n) => n + 1)
-        if (acc > ACC_MAX) return // 정확도 나쁜 fix는 거리에서 제외
-        const p: GeoPoint = {
-          lat: c.latitude,
-          lng: c.longitude,
-          t: pos.timestamp,
-          acc,
-          alt: c.altitude ?? undefined,
-        }
-        const prev = lastAccepted.current
-        if (!prev) {
-          lastAccepted.current = p
-          trackRef.current.push(p)
-          return
-        }
-        const d = haversine(prev.lat, prev.lng, p.lat, p.lng) // m
-        const dt = Math.max((p.t - prev.t) / 1000, 0.001)
-        // 제자리 GPS 드리프트 차단: 이동이 정확도 절반(최소 4m)보다 작으면 무시
-        if (d < Math.max(acc * 0.5, 4)) return
-        // 순간이동(터널/신호 튐) 차단
-        if (d / dt > MAX_SPEED) {
-          lastAccepted.current = p
-          return
-        }
-        distRef.current += d / 1000
-        setDist(distRef.current)
-        lastAccepted.current = p
-        trackRef.current.push(p)
-        // 현재 페이스 — 최근 15초 구간으로 산출(단일 fix 흔들림 방지)
-        paceWin.current.push({ t: p.t, d: distRef.current })
-        while (paceWin.current.length > 1 && p.t - paceWin.current[0].t > PACE_WINDOW_MS) {
-          paceWin.current.shift()
-        }
-        const w0 = paceWin.current[0]
-        const dd = distRef.current - w0.d
-        const ddt = (p.t - w0.t) / 1000
-        if (dd > 0.012) setCurPace(ddt / dd)
-      },
-      (err) => setGpsErr(err.message || 'GPS 신호를 받지 못했어요'),
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 12000 },
-    )
-    return () => navigator.geolocation.clearWatch(id)
-  }, [phase, useSim])
+    let watch: LocationWatch | null = null
+    let cancelled = false
+    getLocationProvider()
+      .watch(handleFix, (msg) => setGpsErr(msg))
+      .then((w) => {
+        if (cancelled) w.stop()
+        else watch = w
+      })
+      .catch((e) => setGpsErr(e instanceof Error ? e.message : 'GPS를 시작하지 못했어요'))
+    return () => {
+      cancelled = true
+      watch?.stop()
+    }
+  }, [phase, useSim, nativeGps, handleFix])
 
   // km를 넘을 때마다 구간 기록 (두 모드 공통)
   useEffect(() => {
@@ -157,12 +199,18 @@ export default function RunTracker({
     setGpsErr(null)
     setAccuracy(null)
     setFixes(0)
+    setLocked(false)
     lastAccepted.current = null
     trackRef.current = []
     distRef.current = 0
     paceWin.current = []
     lastSplitAt.current = 0
     simTime.current = 0
+    kalman.current.reset()
+    anchored.current = false
+    reanchor.current = false
+    elapsedBase.current = 0
+    segStart.current = Date.now()
     startedAt.current = new Date().toISOString()
     setPhase('run')
   }
@@ -170,13 +218,21 @@ export default function RunTracker({
   const finish = () => {
     const now = new Date()
     const started = startedAt.current ? new Date(startedAt.current) : now
+    const track = trackRef.current
+    // 실제 GPS는 적산 거리 대신 최종 트랙으로 재계산해 일치 보장(부동소수 누적 오차 제거)
+    const finalKm = !useSim && track.length >= 2 ? trackDistanceKm(track) : dist
+    // 경과는 벽시계로 마감(타이머 throttle/지연 무시) — 달리는 중 종료 시 현재 구간 포함
+    const finalSec =
+      !useSim && phase === 'run'
+        ? elapsedBase.current + (now.getTime() - segStart.current) / 1000
+        : elapsed
     setRecord({
       id: `run-${Date.now()}`,
       source: 'app',
       dateLabel: '오늘',
       startTime: hhmm(started),
-      distanceKm: Math.round(dist * 100) / 100,
-      durationSec: Math.round(elapsed),
+      distanceKm: Math.round(finalKm * 100) / 100,
+      durationSec: Math.round(finalSec),
       splits,
       avgHr: useSim ? 140 + Math.round(Math.random() * 18) : undefined,
       cadence: useSim ? 160 + Math.round(Math.random() * 14) : undefined,
@@ -211,7 +267,9 @@ export default function RunTracker({
         <p className="mt-3 text-[13px] leading-relaxed text-mute">
           {useSim
             ? '시뮬레이션 모드 — 실제 이동 없이 거리·페이스가 채워져요.'
-            : '시작을 누르면 GPS로 거리·페이스·구간이 실시간 측정돼요. 야외에서 화면을 켠 채 달려주세요.'}
+            : nativeGps
+              ? '시작을 누르면 GPS로 거리·페이스·구간이 실시간 측정돼요. 화면을 끄거나 주머니에 넣어도 계속 기록돼요.'
+              : '시작을 누르면 GPS로 거리·페이스·구간이 실시간 측정돼요. 야외에서 화면을 켠 채 달려주세요.'}
         </p>
 
         {/* 모드 선택 */}
@@ -240,7 +298,7 @@ export default function RunTracker({
         <div className="mt-5 flex items-center gap-2">
           <Tag tone="amber">프로토타입</Tag>
           <span className="text-[11px] text-mute">
-            {useSim ? '시뮬레이션 ×20 배속' : 'GPS 고정밀 모드'}
+            {useSim ? '시뮬레이션 ×20 배속' : nativeGps ? 'GPS 고정밀 · 백그라운드' : 'GPS 고정밀 모드'}
           </span>
         </div>
         <button
@@ -275,8 +333,12 @@ export default function RunTracker({
               <span className="text-route">⚠ {gpsErr}</span>
             ) : fixes === 0 ? (
               'GPS 신호 잡는 중…'
+            ) : !locked ? (
+              <span className="text-route">정밀 GPS 안정화 중… ±{Math.round(accuracy ?? 0)}m</span>
             ) : (
-              `GPS 정확도 ±${Math.round(accuracy ?? 0)}m · ${fixes} fixes`
+              <>
+                GPS {gpsQuality(accuracy)} · ±{Math.round(accuracy ?? 0)}m · {fixes} fixes
+              </>
             )}
           </p>
         )}
@@ -339,7 +401,15 @@ export default function RunTracker({
 
         <div className="mt-auto grid grid-cols-2 gap-3 pt-8">
           <button
-            onClick={() => setPhase(phase === 'run' ? 'pause' : 'run')}
+            onClick={() => {
+              if (phase === 'run') {
+                // 일시정지: 재개 첫 fix에서 정지 중 이동분을 거리에 더하지 않도록 표시
+                if (!useSim) reanchor.current = true
+                setPhase('pause')
+              } else {
+                setPhase('run')
+              }
+            }}
             className="rounded-2xl bg-card py-4 text-[16px] font-bold text-ink"
           >
             {phase === 'run' ? '일시정지' : '재개'}

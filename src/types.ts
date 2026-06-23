@@ -142,6 +142,7 @@ export interface GeoPoint {
   t: number // epoch ms
   acc?: number // 위치 정확도(m)
   alt?: number // 고도(m)
+  brk?: boolean // 일시정지 후 재개 지점 — 이전 점과 잇지 않음(거리·경로 분절)
 }
 
 export interface RunRecord {

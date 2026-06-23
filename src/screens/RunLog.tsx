@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Goal, Profile, RunRecord, Workout } from '../types'
 import { fmtPace } from '../logic'
 import { generatePlan, GOAL_META } from '../coaching'
 import { allRecentRuns, connectedIds, fmtClock, SOURCE_META } from '../runs'
-import { buildContext, isPro, reviewRun, type RunReview } from '../aiCoach'
+import { buildContext, fetchCoachReview, isPro, reviewRun, type RunReview } from '../aiCoach'
 import { BackHeader, SectionTitle, Tag } from '../components/ui'
 import RouteLine from '../components/RouteLine'
 import RouteMap from '../components/RouteMap'
@@ -247,6 +247,25 @@ function TodayPlanCard({
   )
 }
 
+/** AI 코치 리뷰 훅 — 즉시 목업으로 렌더 후 AI 결과가 오면 교체(폴백 내장). */
+function useCoachReview(profile: Profile, run: RunRecord, runs: RunRecord[]) {
+  const ctx = useMemo(() => buildContext(profile, run, runs), [profile, run, runs])
+  const [review, setReview] = useState<RunReview>(() => reviewRun(ctx))
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    setReview(reviewRun(ctx)) // 즉시 표시(레이아웃 안정) — AI 도착 시 교체
+    fetchCoachReview(ctx)
+      .then((r) => alive && setReview(r))
+      .finally(() => alive && setLoading(false))
+    return () => {
+      alive = false
+    }
+  }, [ctx])
+  return { review, loading }
+}
+
 function RunDetail({
   r,
   profile,
@@ -260,7 +279,7 @@ function RunDetail({
   onBack: () => void
   onMakeCert: (r: RunRecord) => void
 }) {
-  const review = useMemo(() => reviewRun(buildContext(profile, r, runs)), [profile, r, runs])
+  const { review, loading } = useCoachReview(profile, r, runs)
   const avg = r.durationSec / Math.max(r.distanceKm, 0.01)
   const minSplit = r.splits.length ? Math.min(...r.splits) : 0
   const kcal = Math.round(r.distanceKm * 62)
@@ -295,7 +314,7 @@ function RunDetail({
           ))}
         </div>
 
-        <CoachSection review={review} />
+        <CoachSection review={review} loading={loading} />
 
         <div className="mt-4 rounded-2xl border border-line bg-card p-4">
           <SectionTitle
@@ -404,7 +423,7 @@ function AiReviewCard({
   runs: RunRecord[]
   onOpen: () => void
 }) {
-  const review = useMemo(() => reviewRun(buildContext(profile, run, runs)), [profile, run, runs])
+  const { review, loading } = useCoachReview(profile, run, runs)
   return (
     <div className="mt-4 rounded-[10px] bg-ink p-4 text-white club-shadow">
       <div className="flex items-center justify-between">
@@ -412,7 +431,7 @@ function AiReviewCard({
           AI 러닝 리뷰
         </span>
         <span className="rounded-[2px] bg-white/10 px-1.5 py-0.5 text-[9px] font-extrabold tracking-[0.1em] text-white/60">
-          BETA
+          {loading ? '해석 중…' : 'BETA'}
         </span>
       </div>
       <p className="mt-2.5 text-[17px] font-extrabold leading-snug text-white">{review.headline}</p>
@@ -439,7 +458,7 @@ function AiReviewCard({
 }
 
 /** 기록 상세 BREQ Coach 섹션 */
-function CoachSection({ review }: { review: RunReview }) {
+function CoachSection({ review, loading }: { review: RunReview; loading?: boolean }) {
   const pro = isPro()
   return (
     <div className="mt-4 rounded-[10px] bg-ink p-4 text-white club-shadow">
@@ -448,7 +467,7 @@ function CoachSection({ review }: { review: RunReview }) {
           BREQ COACH
         </span>
         <span className="rounded-[2px] bg-white/10 px-1.5 py-0.5 text-[9px] font-extrabold tracking-[0.1em] text-white/60">
-          AI · BETA
+          {loading ? '해석 중…' : 'AI · BETA'}
         </span>
       </div>
       <p className="mt-2.5 text-[16px] font-extrabold leading-snug text-white">{review.headline}</p>

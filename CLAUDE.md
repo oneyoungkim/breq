@@ -20,7 +20,9 @@ npm run build        # 타입체크는 npx tsc --noEmit
 - `src/App.tsx` — 탭 라우팅(모임/크루/기록/인증/마이), 인트로, 트래커/코칭/랭킹/유저갤러리 오버레이
 - `src/screens/Intro.tsx` — GPS 라인 드로잉 + BREQ 타이포 + 단어 리빌 + 수증기
 - `src/screens/RunLog.tsx` — 기록 탭. 상단 **AI 러닝 리뷰** 카드 + 기록 목록 + `RunDetail`(BREQ Coach 섹션 + 실제 지도)
-- `src/screens/RunTracker.tsx` — **실제 GPS 러닝 트래커**(watchPosition+haversine, 정확도 게이트·드리프트 차단·롤링 페이스), 시뮬레이션 폴백
+- `src/screens/RunTracker.tsx` — **실제 GPS 러닝 트래커**. 칼만 필터 보정·출발 안정화 게이트·정확도 게이트(±25m)·드리프트/순간이동 차단·롤링 페이스·벽시계 경과·일시정지 유령거리 차단. 시뮬레이션 폴백
+- `src/gps.ts` — GPS 정밀화 코어. `GpsKalman`(위경도 1D 칼만), `haversine`, `trackDistanceKm`(분절 brk 제외 재계산)
+- `src/location.ts` + `src/native/geolocation.ts` — 위치 프로바이더. 웹=`navigator.geolocation`(포그라운드), 네이티브=`@capacitor/geolocation`(백그라운드). `getLocationProvider()` 자동 분기
 - `src/screens/Cert.tsx` — 인증카드. 6템플릿(minimal/route/photo/pride/crew/race)×4배경(light/dark/blue/photo)×2비율(9:16/4:5). 해상도 독립 canvas `drawCard`
 - `src/screens/ProfileScreen.tsx` — 마이. 러너정보(AI코치용) + 워치·앱 연동
 - `src/aiCoach.ts` — AI 코치(목업). `reviewRun(CoachContext)→RunReview`. 톤: care(슬로우)/perform(기록러)
@@ -31,9 +33,9 @@ npm run build        # 타입체크는 npx tsc --noEmit
 - `src/types.ts` — `RunRecord`(track:GeoPoint[] 포함), `RunInput`, `AthleteInfo`, `CertTemplate/Theme/Ratio`
 
 ## "실제로 교체" 지점 (목업 → 프로덕션)
-- **AI**: `aiCoach.ts`의 `reviewRun` → `fetchCoachReview`(buildCoachPrompt 포함, OpenAI 호출 자리)로. `RunReview` 계약 동일 → UI 무변경
+- **AI**: ✅ 연동 완료. `aiCoach.ts`의 `fetchCoachReview` → `POST /api/coach`(Vercel 서버리스, `api/coach.ts`+`api/_coach.ts`) → **Claude Sonnet 4.6**(구조화 출력). 실패 시 `reviewRun` 목업 자동 폴백. signals/tone은 클라 계산·병합. 키는 서버에서만 읽음(`ANTHROPIC_API_KEY`). 로컬은 `vite.config.ts` dev 미들웨어가 같은 코어 재사용. 모델 교체는 `api/_coach.ts`의 `MODEL` 상수(예: `claude-haiku-4-5`)
 - **워치/건강**: `getHealthProvider()`가 네이티브에서 `HealthKitProvider`(capacitor-health) 자동 선택. 웹은 Mock
-- **백그라운드 GPS**: 아직 미구현. 네이티브에서 `@capacitor/geolocation` 백그라운드 위치 필요(웹은 화면 켠 포그라운드만 측정됨)
+- **백그라운드 GPS**: 코드 구현 완료(`location.ts`/`native/geolocation.ts`). 네이티브에서 Info.plist 위치 사유 2개 + Background Modes(Location updates) + "항상 허용" 권한 필요(IOS_SETUP.md 3.5). 웹은 화면 켠 포그라운드만 측정
 
 ## 네이티브 iOS (맥에서)
 **`IOS_SETUP.md` 참고.** Capacitor v8(core/cli/ios) + `capacitor-health` + `leaflet` 설치됨. `capacitor.config.ts`(appId `com.lawnald.breq`, webDir `dist`).
@@ -50,6 +52,7 @@ npx cap open ios     # Xcode → HealthKit capability + Info.plist NSHealthShare
 - localStorage 키: `runnersway.profile / .runs / .healthRuns / .integrations / .healthSync / .athlete / .goal / .gallery / .introQuote`
 
 ## 다음 후보
-- 네이티브 `@capacitor/geolocation` 백그라운드 트래킹(주머니/화면끔 러닝)
 - 실제 AI API 연동(aiCoach 교체)
 - 고도(elevation) 정확 산출(현재 GPS 고도 노이즈로 미표시)
+- 백그라운드 GPS 실기기 검증(Info.plist/Background Modes 설정 후 화면 끔 러닝 테스트)
+- 일시정지 갭 경로 렌더 분절(RoutePath/RouteMap에서 `brk` 점 잇지 않기)

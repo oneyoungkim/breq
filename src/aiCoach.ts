@@ -308,8 +308,44 @@ export function buildCoachPrompt(ctx: CoachContext): string {
 }
 
 export async function fetchCoachReview(ctx: CoachContext): Promise<RunReview> {
-  // TODO(prod): 실제 API 호출로 교체
-  // const res = await fetch('/api/coach', { method:'POST', body: JSON.stringify({ prompt: buildCoachPrompt(ctx) }) })
-  // const data = await res.json(); return data as RunReview
-  return reviewRun(ctx)
+  // signals/tone 은 결정적 계산이라 클라이언트에서 산출하고, 텍스트만 AI가 생성 → 병합.
+  const signals = computeSignals(ctx)
+  const tone: RunReview['tone'] = careTone(ctx.profile.level, ctx.profile.walkRun)
+    ? 'care'
+    : 'perform'
+  try {
+    const res = await fetch('/api/coach', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ prompt: buildCoachPrompt(ctx), tone }),
+    })
+    if (!res.ok) throw new Error(`coach api ${res.status}`)
+    const d = (await res.json()) as Partial<RunReview> & { error?: string }
+    if (d.error) throw new Error(d.error)
+    if (
+      typeof d.headline !== 'string' ||
+      typeof d.summary !== 'string' ||
+      !Array.isArray(d.good) ||
+      !Array.isArray(d.watch) ||
+      typeof d.next !== 'string' ||
+      typeof d.certLine !== 'string'
+    ) {
+      throw new Error('coach api: malformed response')
+    }
+    return {
+      headline: d.headline,
+      summary: d.summary,
+      good: d.good,
+      watch: d.watch,
+      next: d.next,
+      certLine: d.certLine,
+      safetyNote: typeof d.safetyNote === 'string' && d.safetyNote ? d.safetyNote : undefined,
+      tone,
+      signals,
+    }
+  } catch (e) {
+    // 실패(키 없음·네트워크·형식 오류) 시 규칙 기반 목업으로 폴백 — 앱은 항상 동작한다.
+    console.warn('[coach] AI 호출 실패, 목업으로 폴백:', e)
+    return reviewRun(ctx)
+  }
 }

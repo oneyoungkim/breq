@@ -13,6 +13,7 @@
 
 - Capacitor v8 설치: `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`
 - HealthKit 플러그인 설치: `capacitor-health`
+- **GPS 플러그인 설치: `@capacitor/geolocation`** (백그라운드 러닝 트래킹용)
 - `capacitor.config.ts` 생성 (appId `com.lawnald.breq`, appName `BREQ`, webDir `dist`)
 - HealthKit 어댑터 구현: `src/native/healthkit.ts` (권한요청 + 러닝 워크아웃 → RunRecord 매핑)
   - 앱 코드는 자동 분기: 네이티브에서 실행되면 `HealthKitProvider`, 웹에서는 목업
@@ -57,6 +58,22 @@ Xcode에서:
    - Value: `러닝 기록을 불러와 AI 코치가 오늘의 러닝을 해석하기 위해 건강 데이터를 읽습니다.`
    - (쓰기는 하지 않으므로 Update 설명은 불필요)
 
+### 3.5 GPS 백그라운드 트래킹 설정 (인앱 러닝 측정)
+화면을 끄거나 주머니에 넣은 채 달려도 거리·페이스가 계속 기록되게 하려면:
+1. **Info.plist** 에 위치 사유 문자열 2개 추가 (없으면 권한 요청 시 크래시):
+   - `Privacy - Location When In Use Usage Description` (`NSLocationWhenInUseUsageDescription`)
+     Value: `러닝 중 거리·페이스·경로를 실시간으로 측정합니다.`
+   - `Privacy - Location Always and When In Use Usage Description`
+     (`NSLocationAlwaysAndWhenInUseUsageDescription`)
+     Value: `화면을 끈 채 달려도 러닝을 끊김 없이 측정하기 위해 백그라운드 위치를 사용합니다.`
+2. **App 타깃 → Signing & Capabilities → + Capability → Background Modes** 추가 후
+   **Location updates** 체크 (Info.plist의 `UIBackgroundModes`에 `location` 추가됨)
+3. 앱 실행 후 위치 권한을 **"항상 허용"** 으로 부여해야 백그라운드 측정이 됩니다.
+   ("앱을 사용하는 동안만 허용"이면 화면을 끄면 측정이 멈출 수 있음)
+
+> 코드는 자동 분기: 네이티브에서 실행되면 `@capacitor/geolocation`(백그라운드),
+> 웹에서는 `navigator.geolocation`(포그라운드). 트래커 UI·정밀화 로직은 그대로.
+
 ### 4. 실기기에서 실행
 1. 애플워치와 **페어링된 아이폰**을 케이블로 맥에 연결
    (HealthKit 데이터는 실기기에만 있음 — 시뮬레이터엔 거의 없음)
@@ -89,6 +106,9 @@ npm run cap:sync   # = vite build && cap sync ios
 - **km 스플릿**: HealthKit 워크아웃엔 km 구간 데이터가 없어 평균 페이스로 균등 분할합니다.
   정밀 스플릿이 필요하면 `queryWorkouts({ includeRoute: true })`로 좌표/시간을 받아
   `src/native/healthkit.ts`에서 계산하세요.
-- **인앱 실시간 GPS 추적**(러닝 트래커)은 현재 시뮬레이션입니다. 실제로 측정하려면
-  `@capacitor/geolocation`을 추가해 별도 구현이 필요합니다(이번 범위 아님).
+- **인앱 실시간 GPS 추적**(러닝 트래커)은 구현 완료. 웹은 포그라운드(`navigator.geolocation`),
+  네이티브는 백그라운드(`@capacitor/geolocation`)로 자동 분기됩니다. 정밀화(칼만 필터·정확도
+  게이트·드리프트/순간이동 차단·벽시계 경과)는 `src/gps.ts` + `src/screens/RunTracker.tsx`,
+  프로바이더 추상화는 `src/location.ts` + `src/native/geolocation.ts`. 백그라운드 측정은
+  위 **3.5** 의 Info.plist/Background Modes 설정이 있어야 동작합니다.
 - `npm audit`에 high 항목이 있으나 Capacitor CLI의 개발용 의존성(빌드 산출물엔 미포함)입니다.

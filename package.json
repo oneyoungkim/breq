@@ -13,7 +13,9 @@
     "ios": "vite build && cap sync ios && cap open ios"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
     "@capacitor/core": "^8.4.1",
+    "@capacitor/geolocation": "^8.2.0",
     "@capacitor/ios": "^8.4.1",
     "capacitor-health": "^8.1.2",
     "leaflet": "^1.9.4",
