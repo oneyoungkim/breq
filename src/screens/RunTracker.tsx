@@ -316,12 +316,8 @@ export default function RunTracker({
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <p className="text-[10px] font-extrabold tracking-[0.12em] text-route">선택한 코스</p>
-                <p className="truncate text-[14px] font-bold text-ink">
-                  {selectedCourse.name}
-                  {selectedCourse.distanceKm != null && (
-                    <span className="font-semibold text-mute"> · {selectedCourse.distanceKm}km</span>
-                  )}
-                </p>
+                <p className="truncate text-[15px] font-bold text-ink">{selectedCourse.name}</p>
+                <p className="mt-0.5 truncate text-[11px] text-mute">{selectedCourse.region}</p>
               </div>
               <button
                 onClick={() => setSelectedCourse(null)}
@@ -330,10 +326,33 @@ export default function RunTracker({
                 해제
               </button>
             </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <Tag tone={DIFFICULTY_TONE[selectedCourse.difficulty] as 'mint' | 'sky' | 'amber'}>
+                {selectedCourse.difficulty}
+              </Tag>
+              <span className="text-[12px] font-bold tabular-nums text-ink">
+                {selectedCourse.distanceLabel}
+              </span>
+              {courseTimeSec(selectedCourse) != null && (
+                <span className="text-[11px] text-mute">
+                  · 약 {Math.round(courseTimeSec(selectedCourse)! / 60)}분
+                </span>
+              )}
+              <span className="truncate text-[11px] text-mute">· {selectedCourse.useFor}</span>
+            </div>
+            {selectedCourse.nearStation && selectedCourse.nearStation !== '미확인' && (
+              <p className="mt-1.5 text-[11px] text-mute">
+                <span className="font-semibold text-ink/70">가까운 역</span> ·{' '}
+                {selectedCourse.nearStation}
+              </p>
+            )}
             {selectedCourse.lat != null && selectedCourse.lng != null && (
               <div className="mt-2.5">
                 <CourseMiniMap lat={selectedCourse.lat} lng={selectedCourse.lng} />
               </div>
+            )}
+            {selectedCourse.note && (
+              <p className="mt-2 text-[11px] leading-relaxed text-mute">{selectedCourse.note}</p>
             )}
           </div>
         )}
