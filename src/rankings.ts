@@ -1,4 +1,5 @@
 import type { Level } from './types'
+import { allRecentRuns } from './runs'
 
 export type RankCategory = 'mileage' | 'pace5' | 'pace10' | 'goal'
 export type RankScope = 'app' | 'crew'
@@ -107,19 +108,93 @@ const CREW: Partial<Record<RankCategory, Row[]>> = {
   ],
 }
 
+// ── 내 실제 기록 통계 (앱 + 워치/연동 기록 모두 포함) ──
+export interface MyStats {
+  mileageKm: number
+  best5kSec: number | null
+  best10kSec: number | null
+  runCount: number
+}
+
+/** allRecentRuns(앱런 + 건강/연동 캐시)에서 내 통계를 산출 */
+export function myStats(): MyStats {
+  const runs = allRecentRuns().filter((r) => r.distanceKm > 0 && r.durationSec > 0)
+  const mileageKm = runs.reduce((s, r) => s + r.distanceKm, 0)
+  const bestPace = (minKm: number): number | null => {
+    const cand = runs.filter((r) => r.distanceKm >= minKm)
+    if (!cand.length) return null
+    return Math.min(...cand.map((r) => r.durationSec / r.distanceKm))
+  }
+  const p5 = bestPace(4.8) // 5K 근접 이상 기록
+  const p10 = bestPace(9.6)
+  return {
+    mileageKm,
+    best5kSec: p5 == null ? null : Math.round(p5 * 5),
+    best10kSec: p10 == null ? null : Math.round(p10 * 10),
+    runCount: runs.length,
+  }
+}
+
+const parseKm = (s: string) => parseFloat(s) || 0
+const parseTime = (s: string) => {
+  const p = s.split(':').map(Number)
+  return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : (p[0] || 0) * 60 + (p[1] || 0)
+}
+const fmtKm = (km: number) => `${km.toFixed(1)}km`
+const fmtTime = (sec: number) => {
+  const s = Math.round(sec)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const ss = s % 60
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+    : `${m}:${String(ss).padStart(2, '0')}`
+}
+
+/** 카테고리별 내 실제 값 (없으면 null → 해당 랭킹에서 내 행 제외) */
+function myValueFor(cat: RankCategory): string | null {
+  const s = myStats()
+  if (cat === 'mileage') return s.runCount ? fmtKm(s.mileageKm) : null
+  if (cat === 'pace5') return s.best5kSec != null ? fmtTime(s.best5kSec) : null
+  if (cat === 'pace10') return s.best10kSec != null ? fmtTime(s.best10kSec) : null
+  return null // goal은 플랜 달성률이라 별도(목업 유지)
+}
+
 export function getRanking(
   scope: RankScope,
   cat: RankCategory,
   myName: string,
 ): RankEntry[] {
-  const table = scope === 'app' ? APP[cat] : (CREW[cat] ?? [])
-  return table
-    .filter(([name]) => name !== myName) // 내 닉네임과 겹치는 목업 행 제거
-    .map(([name, level, value]) =>
-      name === ME
-        ? { name: myName, level, value, me: true }
-        : { name, level, value },
-    )
+  const table = (scope === 'app' ? APP[cat] : (CREW[cat] ?? [])).filter(
+    ([name]) => name !== myName, // 내 닉네임과 겹치는 목업 행 제거
+  )
+  const myValue = myValueFor(cat)
+
+  // goal(플랜 달성률) 또는 산출 불가 시 — 기존 정적 동작 유지.
+  // 단 산출 불가한 페이스 카테고리는 가짜 내 기록을 보이지 않도록 내 행 제외.
+  if (myValue == null) {
+    return table
+      .filter(([name]) => !(name === ME && cat !== 'goal'))
+      .map(([name, level, value]) =>
+        name === ME ? { name: myName, level, value, me: true } : { name, level, value },
+      )
+  }
+
+  // 내 실제 값으로 교체 후, 값 기준 재정렬(마일리지=내림차순, 페이스=오름차순)
+  const asc = cat !== 'mileage'
+  const rows = table.map(([name, level, value]) => {
+    const me = name === ME
+    const v = me ? myValue : value
+    return {
+      name: me ? myName : name,
+      level,
+      value: v,
+      me,
+      num: cat === 'mileage' ? parseKm(v) : parseTime(v),
+    }
+  })
+  rows.sort((a, b) => (asc ? a.num - b.num : b.num - a.num))
+  return rows.map(({ name, level, value, me }) => ({ name, level, value, me }))
 }
 
 const PACE_RANK_KEY = 'runnersway.crewPaceRank'
