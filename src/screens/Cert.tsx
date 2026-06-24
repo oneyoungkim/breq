@@ -3,12 +3,14 @@ import type {
   CardRatio,
   CardTheme,
   CertTemplate,
+  GeoPoint,
   Profile,
   RunInput,
   RunRecord,
 } from '../types'
 import { calcPace, fmtPace, hashtags } from '../logic'
 import { allRecentRuns, fmtClock, SOURCE_META } from '../runs'
+import { isPro } from '../aiCoach'
 import { CREW } from '../data'
 import { Field, inputCls, SectionTitle, Toggle } from '../components/ui'
 
@@ -163,6 +165,14 @@ function paintBackground(
   }
 }
 
+export interface MonthlyAgg {
+  km: number
+  count: number
+  paceSec: number | null
+  tracks: GeoPoint[][]
+  label: string // 예: 2026.06
+}
+
 export type DrawOpts = {
   template: CertTemplate
   theme: CardTheme
@@ -171,6 +181,7 @@ export type DrawOpts = {
   paceSec: number | null
   dateStr: string
   photo: HTMLImageElement | null
+  monthly: MonthlyAgg
 }
 
 function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
@@ -182,7 +193,7 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
   ctx.clearRect(0, 0, W, H)
   ctx.textBaseline = 'alphabetic'
 
-  const { run, paceSec, dateStr, photo } = opts
+  const { run, paceSec, dateStr, photo, monthly } = opts
   const pal = PALETTES[opts.theme]
   const bgTheme: CardTheme = opts.theme === 'photo' && !photo ? 'dark' : opts.theme
   paintBackground(ctx, bgTheme, photo, W, H)
@@ -717,6 +728,104 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
     footer()
   }
 
+  // 작은 루트 한 개를 정확 축척으로 박스에 맞춰 그린다(월간 콜라주용)
+  const miniRoute = (track: GeoPoint[], bx: number, by: number, bw: number, bh: number) => {
+    const pad = 12 * u
+    const meanLat = track.reduce((s, p) => s + p.lat, 0) / track.length
+    const kx = Math.cos((meanLat * Math.PI) / 180)
+    const P = track.map((p) => ({ x: p.lng * kx, y: -p.lat }))
+    const xs = P.map((p) => p.x)
+    const ys = P.map((p) => p.y)
+    const minX = Math.min(...xs)
+    const minY = Math.min(...ys)
+    const spanX = Math.max(...xs) - minX || 1e-9
+    const spanY = Math.max(...ys) - minY || 1e-9
+    const sc = Math.min((bw - 2 * pad) / spanX, (bh - 2 * pad) / spanY)
+    const ox = bx + (bw - spanX * sc) / 2
+    const oy = by + (bh - spanY * sc) / 2
+    ctx.strokeStyle = pal.accent
+    ctx.lineWidth = 3 * u
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(ox + (P[0].x - minX) * sc, oy + (P[0].y - minY) * sc)
+    for (let i = 1; i < P.length; i++) ctx.lineTo(ox + (P[i].x - minX) * sc, oy + (P[i].y - minY) * sc)
+    ctx.stroke()
+  }
+
+  // ── 월간 누적 마일리지 (PRO 전용) — 이달 뛴 루트를 모아 보여주는 고급 카드 ──
+  const tplMonthly = () => {
+    header(monthly.label, pal.accent)
+    tlabel('THIS MONTH', m, top + 10 * u, { size: 23, color: pal.accent, ls: 8 })
+    tlabel('월간 누적 마일리지', m, top + 46 * u, { size: 26, color: pal.dim, ls: 2 })
+    bigVal(monthly.km.toFixed(1), 'KM', m, top + 236 * u, { vSize: 224, uSize: 66 })
+
+    const sy0 = top + 312 * u
+    hairline(sy0 - 38 * u)
+    const cols: [string, string, string][] = [
+      ['RUNS', String(monthly.count), ''],
+      ['AVG PACE', monthly.paceSec ? fmtPace(monthly.paceSec) : '--', monthly.paceSec ? '/KM' : ''],
+      ['ROUTES', String(monthly.tracks.length), ''],
+    ]
+    const colW = contentW / 3
+    cols.forEach((c, i) => {
+      const xi = m + colW * i
+      tlabel(c[0], xi, sy0, { size: 22, color: pal.dim, ls: 4 })
+      bigVal(c[1], c[2], xi, sy0 + 64 * u, { vSize: 58, uSize: 24 })
+      if (i > 0) {
+        ctx.strokeStyle = pal.line
+        ctx.lineWidth = 1.5 * u
+        ctx.beginPath()
+        ctx.moveTo(xi - 26 * u, sy0 - 26 * u)
+        ctx.lineTo(xi - 26 * u, sy0 + 70 * u)
+        ctx.stroke()
+      }
+    })
+
+    const gy = sy0 + 134 * u
+    tlabel('이달의 루트', m, gy, { size: 22, color: pal.dim, ls: 4 })
+    const gy0 = gy + 28 * u
+    const gh = bot - gy0
+    const valid = monthly.tracks.filter((t) => t.length >= 2)
+    if (valid.length === 0) {
+      rr(ctx, m, gy0, contentW, gh, 10 * u)
+      ctx.strokeStyle = pal.line
+      ctx.lineWidth = 1.5 * u
+      ctx.stroke()
+      tlabel('BREQ로 측정한 루트가 모일수록', cx, gy0 + gh / 2 - 6 * u, {
+        size: 22,
+        align: 'center',
+        color: pal.faint,
+        ls: 1,
+      })
+      tlabel('이 카드가 채워져요', cx, gy0 + gh / 2 + 30 * u, {
+        size: 22,
+        align: 'center',
+        color: pal.faint,
+        ls: 1,
+      })
+    } else {
+      const cols2 = 3
+      const gap = 16 * u
+      const cellW = (contentW - gap * (cols2 - 1)) / cols2
+      const rows = Math.max(1, Math.floor((gh + gap) / (cellW + gap)))
+      const max = Math.min(valid.length, cols2 * rows)
+      for (let i = 0; i < max; i++) {
+        const cxi = i % cols2
+        const ryi = Math.floor(i / cols2)
+        const bx = m + cxi * (cellW + gap)
+        const by = gy0 + ryi * (cellW + gap)
+        rr(ctx, bx, by, cellW, cellW, 8 * u)
+        ctx.fillStyle = pal.coreBg
+        ctx.fill()
+        ctx.strokeStyle = pal.line
+        ctx.lineWidth = 1.5 * u
+        ctx.stroke()
+        miniRoute(valid[i], bx, by, cellW, cellW)
+      }
+    }
+  }
+
   switch (opts.template) {
     case 'minimal':
       tplMinimal()
@@ -735,6 +844,9 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
       break
     case 'race':
       tplRace()
+      break
+    case 'monthly':
+      tplMonthly()
       break
   }
 
@@ -762,12 +874,14 @@ function CardThumb({
   label,
   opts,
   selected,
+  locked = false,
   onClick,
 }: {
   template: CertTemplate
   label: string
   opts: Omit<DrawOpts, 'template'>
   selected: boolean
+  locked?: boolean
   onClick: () => void
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -792,7 +906,7 @@ function CardThumb({
       aria-label={`${label} 템플릿`}
     >
       <span
-        className={`overflow-hidden rounded-[6px] border-2 transition-colors ${
+        className={`relative block overflow-hidden rounded-[6px] border-2 transition-colors ${
           selected ? 'border-brand' : 'border-line'
         }`}
       >
@@ -802,6 +916,13 @@ function CardThumb({
           height={Math.round(r.h * 0.32)}
           style={{ width: cssW, height: cssH, display: 'block' }}
         />
+        {locked && (
+          <span className="absolute inset-0 flex items-center justify-center bg-ink/45">
+            <span className="rounded-[3px] bg-white px-1.5 py-0.5 text-[9px] font-extrabold tracking-[0.08em] text-ink">
+              🔒 PRO
+            </span>
+          </span>
+        )}
       </span>
       <span
         className={`text-[11px] font-extrabold ${selected ? 'text-ink' : 'text-mute'}`}
@@ -812,13 +933,14 @@ function CardThumb({
   )
 }
 
-const TEMPLATES: { id: CertTemplate; label: string }[] = [
+const TEMPLATES: { id: CertTemplate; label: string; pro?: boolean }[] = [
   { id: 'minimal', label: '미니멀' },
   { id: 'route', label: '루트' },
   { id: 'photo', label: '포토' },
   { id: 'pride', label: '프라이드' },
   { id: 'crew', label: '크루' },
   { id: 'race', label: '레이스' },
+  { id: 'monthly', label: '먼슬리 PRO', pro: true },
 ]
 
 const THEMES: { id: CardTheme; label: string }[] = [
@@ -856,6 +978,8 @@ export default function Cert({
     cadence: prefill?.cadence,
   }))
   const [tpl, setTpl] = useState<CertTemplate>('minimal')
+  const [pro, setPro] = useState(isPro())
+  const [upsell, setUpsell] = useState(false)
   const [theme, setTheme] = useState<CardTheme>('light')
   const [ratio, setRatio] = useState<CardRatio>('story')
   const [copied, setCopied] = useState(false)
@@ -903,9 +1027,26 @@ export default function Cert({
 
   const tags = hashtags(profile.level, profile.region, run.withCrew)
 
+  const monthly = useMemo<MonthlyAgg>(() => {
+    const runs = allRecentRuns().filter((r) => r.distanceKm > 0 && r.durationSec > 0)
+    const km = runs.reduce((s, r) => s + r.distanceKm, 0)
+    const totalSec = runs.reduce((s, r) => s + r.durationSec, 0)
+    const tracks = runs
+      .map((r) => r.track)
+      .filter((t): t is GeoPoint[] => !!t && t.length >= 2)
+    const now = new Date()
+    return {
+      km,
+      count: runs.length,
+      paceSec: km > 0 ? totalSec / km : null,
+      tracks,
+      label: `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`,
+    }
+  }, [])
+
   const drawOpts = useMemo<Omit<DrawOpts, 'template'>>(
-    () => ({ theme, ratio, run, paceSec, dateStr, photo }),
-    [theme, ratio, run, paceSec, dateStr, photo],
+    () => ({ theme, ratio, run, paceSec, dateStr, photo, monthly }),
+    [theme, ratio, run, paceSec, dateStr, photo, monthly],
   )
 
   useEffect(() => {
@@ -1119,17 +1260,49 @@ export default function Cert({
       <div className="mt-4">
         <SectionTitle>템플릿</SectionTitle>
         <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
-          {TEMPLATES.map((t) => (
-            <CardThumb
-              key={t.id}
-              template={t.id}
-              label={t.label}
-              opts={drawOpts}
-              selected={tpl === t.id}
-              onClick={() => chooseTemplate(t.id)}
-            />
-          ))}
+          {TEMPLATES.map((t) => {
+            const locked = !!t.pro && !pro
+            return (
+              <CardThumb
+                key={t.id}
+                template={t.id}
+                label={t.label}
+                opts={drawOpts}
+                selected={tpl === t.id}
+                locked={locked}
+                onClick={() => (locked ? setUpsell(true) : chooseTemplate(t.id))}
+              />
+            )
+          })}
         </div>
+        {upsell && (
+          <div className="mt-3 rounded-[8px] border border-brand bg-brand/5 p-4">
+            <p className="text-[13px] font-extrabold text-ink">PRO 전용 고급 카드</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-mute">
+              월간 누적 마일리지 카드는 PRO 구독자만 만들 수 있어요. 이번 달 뛴 모든 루트가 한
+              장에 모여요.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => {
+                  localStorage.setItem('runnersway.pro', '1')
+                  setPro(true)
+                  setUpsell(false)
+                  chooseTemplate('monthly')
+                }}
+                className="rounded-[6px] bg-brand px-4 py-2 text-[13px] font-bold text-white"
+              >
+                PRO 체험 켜기
+              </button>
+              <button
+                onClick={() => setUpsell(false)}
+                className="rounded-[6px] bg-card px-4 py-2 text-[13px] font-bold text-mute"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 배경 + 비율 */}

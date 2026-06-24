@@ -93,6 +93,7 @@ export type CertTemplate =
   | 'pride' // Slow Runner Pride
   | 'crew' // Crew Run
   | 'race' // Race Mode
+  | 'monthly' // 월간 누적 마일리지 (PRO 전용)
 
 export type CardTheme = 'light' | 'dark' | 'blue' | 'photo'
 
