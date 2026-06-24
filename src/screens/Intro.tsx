@@ -83,13 +83,6 @@ function WordReveal({
   )
 }
 
-function quoteSize(text: string) {
-  if (text.length > 48) return 'text-[11px]'
-  if (text.length > 42) return 'text-[12px]'
-  if (text.length > 36) return 'text-[13px]'
-  return 'text-[15px]'
-}
-
 export default function Intro({
   onDone,
   onStartRun,
@@ -103,22 +96,7 @@ export default function Intro({
     <div className="relative flex min-h-dvh flex-col items-center overflow-hidden bg-bg px-6 pb-9 pt-6">
       {/* center hero */}
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center text-center">
-        <div className="intro-fade mb-4 bg-bg p-0" style={{ animationDelay: '0.05s' }}>
-          <video
-            className="aspect-[3/4] w-[98px] rounded-[8px] bg-transparent object-contain"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-label="BREQ running mood video"
-          >
-            <source src="/media/intro-run-alpha.webm" type="video/webm" />
-            <source src="/media/intro-run-bg.mp4" type="video/mp4" />
-          </video>
-        </div>
-
-        {/* GPS 마크 — 즉시 등장, 라인 드로잉이 오프닝 */}
+        {/* GPS 마크 — 단일 히어로. 라인 드로잉이 오프닝(무드 영상 제거로 시선 집중) */}
         <div className="club-shadow rounded-[10px] bg-ink px-8 py-7">
           <BreqMark size={112} className="route-glow text-route" animate />
         </div>
@@ -150,17 +128,12 @@ export default function Intro({
           </div>
         </div>
 
-        <WordReveal
-          text={quote.en}
-          className={`mt-6 w-full max-w-[360px] px-1 text-center font-extrabold leading-snug text-ink ${quoteSize(quote.en)}`}
-          baseDelay={1700}
-          stagger={65}
-        />
+        {/* 인용문 한 줄(한글 메인) — 영문 라인 제거로 군더더기 정리 */}
         <WordReveal
           text={quote.ko}
-          className="mt-2 w-full max-w-[360px] px-1 text-center text-[12px] leading-relaxed text-mute"
-          baseDelay={2100}
-          stagger={50}
+          className="mt-6 w-full max-w-[320px] px-1 text-center text-[16px] font-bold leading-snug tracking-[-0.01em] text-ink"
+          baseDelay={1500}
+          stagger={55}
         />
       </div>
 
