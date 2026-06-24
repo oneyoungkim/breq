@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { GeoPoint, Profile, RunRecord } from '../types'
 import { fmtPace } from '../logic'
 import { fmtClock, saveAppRun } from '../runs'
@@ -6,6 +6,7 @@ import { Chip, inputCls, Tag } from '../components/ui'
 import RoutePath from '../components/RoutePath'
 import { GpsKalman, haversine, trackDistanceKm } from '../gps'
 import { getLocationProvider, type Fix, type LocationWatch } from '../location'
+import { COURSES, courseTimeSec, DIFFICULTY_TONE, type Course } from '../data/courses'
 
 type Phase = 'ready' | 'run' | 'pause' | 'done'
 
@@ -46,6 +47,8 @@ export default function RunTracker({
   const [accuracy, setAccuracy] = useState<number | null>(null)
   const [fixes, setFixes] = useState(0)
   const [locked, setLocked] = useState(false) // 출발 기준점 확정 여부(신호 안정화)
+  const [targetKm, setTargetKm] = useState<'all' | 3 | 5 | 10 | 15>('all') // 추천 코스 거리 필터
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
 
   const lastAccepted = useRef<GeoPoint | null>(null)
   const trackRef = useRef<GeoPoint[]>([])
@@ -236,7 +239,7 @@ export default function RunTracker({
       splits,
       avgHr: useSim ? 140 + Math.round(Math.random() * 18) : undefined,
       cadence: useSim ? 160 + Math.round(Math.random() * 14) : undefined,
-      course: profile.region,
+      course: selectedCourse?.name ?? profile.region,
       track: trackRef.current.length >= 2 ? trackRef.current.slice() : undefined,
       startedAt: started.toISOString(),
       endedAt: now.toISOString(),
@@ -254,10 +257,27 @@ export default function RunTracker({
 
   const avgPace = dist > 0.03 ? elapsed / dist : null
 
+  // 추천 코스 — 목표 거리대 필터 + 내 지역 우선
+  const recommended = useMemo(() => {
+    const inBucket = (km: number | null) => {
+      if (km == null) return targetKm === 'all'
+      if (targetKm === 'all') return true
+      if (targetKm === 3) return km <= 4
+      if (targetKm === 5) return km > 4 && km <= 7
+      if (targetKm === 10) return km > 7 && km <= 13
+      return km > 13 // 롱런
+    }
+    const near = (c: Course) =>
+      !!profile.region && (c.region.includes(profile.region) || profile.region.includes(c.region))
+    return COURSES.filter((c) => inBucket(c.distanceKm))
+      .sort((a, b) => Number(near(b)) - Number(near(a)))
+      .slice(0, 12)
+  }, [targetKm, profile.region])
+
   // ───────── 시작 전 ─────────
   if (phase === 'ready') {
     return (
-      <div className="flex min-h-dvh flex-col justify-center bg-bg px-5">
+      <div className="flex min-h-dvh flex-col bg-bg px-5 pb-12 pt-12">
         <p className="eyebrow">{profile.region} · {useSim ? 'SIMULATION' : 'GPS READY'}</p>
         <h1 className="mt-2 text-[34px] font-black leading-tight tracking-[-0.02em] text-ink">
           오늘의 러닝,
@@ -289,6 +309,26 @@ export default function RunTracker({
           </p>
         )}
 
+        {selectedCourse && (
+          <div className="mt-5 flex items-center justify-between rounded-[6px] border border-route bg-route/5 px-3.5 py-2.5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold tracking-[0.12em] text-route">선택한 코스</p>
+              <p className="truncate text-[14px] font-bold text-ink">
+                {selectedCourse.name}
+                {selectedCourse.distanceKm != null && (
+                  <span className="font-semibold text-mute"> · {selectedCourse.distanceKm}km</span>
+                )}
+              </p>
+            </div>
+            <button
+              onClick={() => setSelectedCourse(null)}
+              className="shrink-0 pl-3 text-[12px] font-semibold text-mute"
+            >
+              해제
+            </button>
+          </div>
+        )}
+
         <button
           onClick={begin}
           className="mt-8 flex h-24 w-full items-center justify-center rounded-[6px] bg-brand text-[22px] font-black tracking-[0.32em] text-white shadow-2xl shadow-brand/30 active:scale-[0.98]"
@@ -301,9 +341,71 @@ export default function RunTracker({
             {useSim ? '시뮬레이션 ×20 배속' : nativeGps ? 'GPS 고정밀 · 백그라운드' : 'GPS 고정밀 모드'}
           </span>
         </div>
+        {/* 추천 코스 — 목표 거리대 인기 코스 */}
+        <div className="mt-9">
+          <div className="flex items-center justify-between">
+            <p className="eyebrow">추천 코스</p>
+            <span className="text-[11px] text-mute">{recommended.length}개</span>
+          </div>
+          <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
+            {([['all', '전체'], [3, '3km'], [5, '5km'], [10, '10km'], [15, '롱런']] as const).map(
+              ([k, label]) => (
+                <Chip key={String(k)} active={targetKm === k} onClick={() => setTargetKm(k)}>
+                  {label}
+                </Chip>
+              ),
+            )}
+          </div>
+          <div className="mt-3 space-y-2">
+            {recommended.length === 0 && (
+              <p className="rounded-[8px] bg-card px-4 py-6 text-center text-[12px] text-mute">
+                이 거리대 추천 코스가 없어요.
+              </p>
+            )}
+            {recommended.map((c) => {
+              const sel = selectedCourse?.id === c.id
+              const t = courseTimeSec(c)
+              const station =
+                c.nearStation && c.nearStation !== '미확인' ? c.nearStation.split(',')[0].trim() : ''
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCourse(sel ? null : c)}
+                  className={`w-full rounded-[8px] border bg-card p-3.5 text-left active:bg-card2 ${
+                    sel ? 'border-route' : 'border-line'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-bold text-ink">{c.name}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-mute">
+                        {c.region}
+                        {station && ` · ${station}`}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-[15px] font-extrabold tabular-nums text-ink">
+                        {c.distanceKm ?? '—'}
+                        <span className="text-[10px] font-bold text-mute">km</span>
+                      </p>
+                      {t != null && <p className="text-[10px] text-mute">약 {Math.round(t / 60)}분</p>}
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex items-center gap-1.5">
+                    <Tag tone={DIFFICULTY_TONE[c.difficulty] as 'mint' | 'sky' | 'amber'}>
+                      {c.difficulty}
+                    </Tag>
+                    <span className="truncate text-[11px] text-mute">{c.useFor}</span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         <button
           onClick={onClose}
-          className="mt-10 self-start text-[13px] font-semibold text-mute"
+          className="mt-8 self-start text-[13px] font-semibold text-mute"
         >
           ← 돌아가기
         </button>
