@@ -75,6 +75,7 @@ export interface RunInput {
   withCrew: boolean
   walkRun: boolean
   // 인증카드 고도화용 옵션 필드 (기록 선택 시 자동 채움 / 카드 단계에서 라벨 편집)
+  source?: RunSource // 측정 소스(앱/애플/가민…) — 인증카드 검증 배지용
   track?: GeoPoint[]
   splits?: number[]
   avgHr?: number

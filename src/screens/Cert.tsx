@@ -737,6 +737,23 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
       tplRace()
       break
   }
+
+  // 측정 소스 검증 라인 — 어떤 기기로 측정했는지(애플워치/가민/BREQ) 박아 조작 방지를 시각화.
+  // 모든 템플릿 공통, 하단 여백(content bot=H-m-56u 아래, footer=H-m+16u 위)에 1회만.
+  const CERT_SRC: Record<string, string> = {
+    app: 'BREQ GPS',
+    apple: 'APPLE WATCH',
+    garmin: 'GARMIN',
+    nike: 'NIKE RUN CLUB',
+    strava: 'STRAVA',
+  }
+  const srcLabel = CERT_SRC[run.source ?? 'app'] ?? 'BREQ GPS'
+  tlabel(`${srcLabel} · VERIFIED`, cx, H - m - 18 * u, {
+    size: 18,
+    align: 'center',
+    color: pal.faint,
+    ls: 4,
+  })
 }
 
 /* ── 템플릿 비교 썸네일 ── */
@@ -832,6 +849,7 @@ export default function Cert({
     shoe: '',
     withCrew: false,
     walkRun: false,
+    source: prefill?.source,
     track: prefill?.track,
     splits: prefill?.splits,
     avgHr: prefill?.avgHr,
@@ -950,6 +968,7 @@ export default function Cert({
         seconds: r.durationSec % 60,
         courseName: r.course ?? prev.courseName,
         walkRun: false,
+        source: r.source,
         track: r.track,
         splits: r.splits,
         avgHr: r.avgHr,
