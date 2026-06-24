@@ -8,6 +8,7 @@ import { GpsKalman, haversine, trackDistanceKm } from '../gps'
 import { getLocationProvider, type Fix, type LocationWatch } from '../location'
 import { COURSES, courseTimeSec, DIFFICULTY_TONE, type Course } from '../data/courses'
 import CourseMiniMap from '../components/CourseMiniMap'
+import CoursePin from '../components/CoursePin'
 
 type Phase = 'ready' | 'run' | 'pause' | 'done'
 
@@ -383,27 +384,36 @@ export default function RunTracker({
                     sel ? 'border-route' : 'border-line'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-[15px] font-bold text-ink">{c.name}</p>
-                      <p className="mt-0.5 truncate text-[11px] text-mute">
-                        {c.region}
-                        {station && ` · ${station}`}
-                      </p>
+                  <div className="flex gap-3">
+                    {c.lat != null && c.lng != null && (
+                      <CoursePin lat={c.lat} lng={c.lng} className="h-[60px] w-[60px] shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-[15px] font-bold text-ink">{c.name}</p>
+                          <p className="mt-0.5 truncate text-[11px] text-mute">
+                            {c.region}
+                            {station && ` · ${station}`}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-[15px] font-extrabold tabular-nums text-ink">
+                            {c.distanceKm ?? '—'}
+                            <span className="text-[10px] font-bold text-mute">km</span>
+                          </p>
+                          {t != null && (
+                            <p className="text-[10px] text-mute">약 {Math.round(t / 60)}분</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <Tag tone={DIFFICULTY_TONE[c.difficulty] as 'mint' | 'sky' | 'amber'}>
+                          {c.difficulty}
+                        </Tag>
+                        <span className="truncate text-[11px] text-mute">{c.useFor}</span>
+                      </div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-[15px] font-extrabold tabular-nums text-ink">
-                        {c.distanceKm ?? '—'}
-                        <span className="text-[10px] font-bold text-mute">km</span>
-                      </p>
-                      {t != null && <p className="text-[10px] text-mute">약 {Math.round(t / 60)}분</p>}
-                    </div>
-                  </div>
-                  <div className="mt-2.5 flex items-center gap-1.5">
-                    <Tag tone={DIFFICULTY_TONE[c.difficulty] as 'mint' | 'sky' | 'amber'}>
-                      {c.difficulty}
-                    </Tag>
-                    <span className="truncate text-[11px] text-mute">{c.useFor}</span>
                   </div>
                 </button>
               )
