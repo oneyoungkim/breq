@@ -1,11 +1,12 @@
 /* ──────────────────────────────────────────────────────────────
    BREQ 추천 코스 데이터 (전국)
 
-   출처: 사용자 제공 자료(running_spots_runspot_national.xlsx)를 BREQ 스키마로
-   재구성. 코스명은 러너들이 공유하는 실제 명칭(닥스훈트런·식빵런·하트런 등).
+   출처: 사용자 제공 자료(running_spots_runspot_national.xlsx) + 잘 알려진 공개
+   스팟을 BREQ 스키마로 재구성. 코스명은 러너들이 공유하는 실제 명칭.
    - distanceKm: 대표 거리(범위는 평균). distanceLabel에 원본 표기 보존
-   - paceSec: 난이도·강변 여부 기반 BREQ 자체 추정 권장 페이스(초/km)
-   - difficulty: 하 | 중 | 상
+   - paceSec: 난이도·강변 기반 BREQ 자체 추정 권장 페이스(초/km)
+   - difficulty: 하 | 중 | 상 (트레일·해안계단·롱런은 중으로 보정)
+   - lat/lng: 스팟 대표 좌표(미니맵 핀용, 근사). 없으면 null → 지도 미표시
    ────────────────────────────────────────────────────────────── */
 
 export type Difficulty = '하' | '중' | '상'
@@ -24,6 +25,8 @@ export interface Course {
   nearStation: string
   useFor: string
   note: string
+  lat: number | null
+  lng: number | null
 }
 
 export const DIFFICULTY_TONE: Record<Difficulty, string> = {
@@ -49,7 +52,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "서울대학교",
     "useFor": "트랙 반복주, 입문",
-    "note": "짧은 트랙형 코스"
+    "note": "짧은 트랙형 코스",
+    "lat": 37.46,
+    "lng": 126.952
   },
   {
     "id": "krc02",
@@ -64,7 +69,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "석촌, 석촌고분, 송파나루, 송파, 잠실",
     "useFor": "중거리 조깅, 시티런",
-    "note": "화장실 9, 식수대 1, 자판기 1, 쉼터 11"
+    "note": "화장실 9, 식수대 1, 자판기 1, 쉼터 11",
+    "lat": 37.505,
+    "lng": 127.106
   },
   {
     "id": "krc03",
@@ -79,7 +86,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "여의도권",
     "useFor": "입문, 워밍업",
-    "note": "여의도공원 안쪽 짧은 코스"
+    "note": "여의도공원 안쪽 짧은 코스",
+    "lat": 37.526,
+    "lng": 126.924
   },
   {
     "id": "krc04",
@@ -94,7 +103,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "흑석, 동작, 노들",
     "useFor": "한강 조깅",
-    "note": "한강 남단 동작~노들~한강대교 라인"
+    "note": "한강 남단 동작~노들~한강대교 라인",
+    "lat": 37.503,
+    "lng": 126.98
   },
   {
     "id": "krc05",
@@ -109,7 +120,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "서울숲, 뚝섬",
     "useFor": "워밍업, 인터벌, 입문",
-    "note": "화장실 21, 식수대 6, 쉼터 6"
+    "note": "화장실 21, 식수대 6, 쉼터 6",
+    "lat": 37.544,
+    "lng": 127.037
   },
   {
     "id": "krc06",
@@ -124,7 +137,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "어린이대공원, 아차산",
     "useFor": "입문, 회복주",
-    "note": "화장실 10, 식수대 1, 자판기 3, 쉼터 4"
+    "note": "화장실 10, 식수대 1, 자판기 3, 쉼터 4",
+    "lat": 37.548,
+    "lng": 127.082
   },
   {
     "id": "krc07",
@@ -133,13 +148,15 @@ export const COURSES: Course[] = [
     "area": "수도권",
     "distanceKm": 8.8,
     "distanceLabel": "8.8",
-    "difficulty": "하",
-    "paceSec": 360,
+    "difficulty": "중",
+    "paceSec": 382,
     "riverside": false,
     "loop": false,
     "nearStation": "약수, 동대입구, 버티고개, 한강진, 충무로, 회현",
     "useFor": "업다운 훈련, 시티런",
-    "note": "고도차 약 95m, 화장실 28, 식수대 11, 자판기 2, 쉼터 21"
+    "note": "고도차 약 95m, 화장실 28, 식수대 11, 자판기 2, 쉼터 21",
+    "lat": 37.551,
+    "lng": 126.988
   },
   {
     "id": "krc08",
@@ -154,7 +171,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "백운호수",
     "useFor": "입문, 회복주, 호수런",
-    "note": "화장실 2"
+    "note": "화장실 2",
+    "lat": 37.38,
+    "lng": 126.998
   },
   {
     "id": "krc09",
@@ -169,7 +188,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "광교중앙역",
     "useFor": "LSD, 하프 준비",
-    "note": "화장실 9, 식수대 1, 쉼터 7"
+    "note": "화장실 9, 식수대 1, 쉼터 7",
+    "lat": 37.286,
+    "lng": 127.064
   },
   {
     "id": "krc10",
@@ -184,7 +205,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "동대문, 종각, 을지로3가, 을지로4가, 광화문",
     "useFor": "도심 야간 조깅",
-    "note": "화장실 55, 식수대 7, 자판기 5, 쉼터 12"
+    "note": "화장실 55, 식수대 7, 자판기 5, 쉼터 12",
+    "lat": 37.569,
+    "lng": 126.978
   },
   {
     "id": "krc11",
@@ -199,7 +222,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "종각, 안국, 광화문, 경복궁, 시청",
     "useFor": "시티런, 관광런",
-    "note": "광화문 관광지 연결 중거리 코스"
+    "note": "광화문 관광지 연결 중거리 코스",
+    "lat": 37.575,
+    "lng": 126.977
   },
   {
     "id": "krc12",
@@ -208,13 +233,15 @@ export const COURSES: Course[] = [
     "area": "수도권",
     "distanceKm": 7.8,
     "distanceLabel": "7.8",
-    "difficulty": "상",
-    "paceSec": 402,
+    "difficulty": "중",
+    "paceSec": 382,
     "riverside": false,
     "loop": true,
     "nearStation": "광화문역",
     "useFor": "시티런",
-    "note": "도심 순환, 신호등·보행자 변수 있음"
+    "note": "도심 순환, 신호등·보행자 변수 있음",
+    "lat": 37.571,
+    "lng": 126.977
   },
   {
     "id": "krc13",
@@ -229,7 +256,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "여의도, 국회의사당, 여의나루",
     "useFor": "입문, 워밍업, 인터벌",
-    "note": "여의도공원 짧은 순환형 코스"
+    "note": "여의도공원 짧은 순환형 코스",
+    "lat": 37.526,
+    "lng": 126.924
   },
   {
     "id": "krc14",
@@ -244,7 +273,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "여의나루, 샛강, 노량진, 신길, 대방, 여의도, 국회의사당",
     "useFor": "템포런, 페이스 조절",
-    "note": "여의도 일대 중거리 코스"
+    "note": "여의도 일대 중거리 코스",
+    "lat": 37.521,
+    "lng": 126.928
   },
   {
     "id": "krc15",
@@ -253,13 +284,15 @@ export const COURSES: Course[] = [
     "area": "수도권",
     "distanceKm": 16.2,
     "distanceLabel": "16.2",
-    "difficulty": "하",
-    "paceSec": 360,
+    "difficulty": "중",
+    "paceSec": 382,
     "riverside": false,
     "loop": false,
     "nearStation": "동대문역사문화공원, 동대문, 을지로입구, 종각, 광화문, 충무로",
     "useFor": "LSD, 하프 준비",
-    "note": "화장실 75, 식수대 17, 자판기 6, 쉼터 31"
+    "note": "화장실 75, 식수대 17, 자판기 6, 쉼터 31",
+    "lat": 37.566,
+    "lng": 126.978
   },
   {
     "id": "krc16",
@@ -274,7 +307,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "미확인",
     "useFor": "워밍업, 쿨다운",
-    "note": "짧은 도심형 코스"
+    "note": "짧은 도심형 코스",
+    "lat": null,
+    "lng": null
   },
   {
     "id": "krc17",
@@ -289,7 +324,9 @@ export const COURSES: Course[] = [
     "loop": true,
     "nearStation": "용산역 인근",
     "useFor": "일몰런, 야경 조깅",
-    "note": "노들섬 둘레 짧은 한강 코스"
+    "note": "노들섬 둘레 짧은 한강 코스",
+    "lat": 37.517,
+    "lng": 126.958
   },
   {
     "id": "krc18",
@@ -304,7 +341,9 @@ export const COURSES: Course[] = [
     "loop": true,
     "nearStation": "고속터미널역, 용산역",
     "useFor": "10km 훈련, 한강런",
-    "note": "세빛섬, 잠수교, 이촌한강공원, 한강대교 경유"
+    "note": "세빛섬, 잠수교, 이촌한강공원, 한강대교 경유",
+    "lat": 37.512,
+    "lng": 126.996
   },
   {
     "id": "krc19",
@@ -313,13 +352,15 @@ export const COURSES: Course[] = [
     "area": "수도권",
     "distanceKm": 10.0,
     "distanceLabel": "10",
-    "difficulty": "상",
-    "paceSec": 397,
+    "difficulty": "중",
+    "paceSec": 377,
     "riverside": true,
     "loop": true,
     "nearStation": "자양역, 뚝섬한강공원권",
     "useFor": "상급 10km, 한강런",
-    "note": "뚝섬한강공원~잠실철교~잠실보 왕복/순환형"
+    "note": "뚝섬한강공원~잠실철교~잠실보 왕복/순환형",
+    "lat": 37.531,
+    "lng": 127.069
   },
   {
     "id": "krc20",
@@ -328,13 +369,15 @@ export const COURSES: Course[] = [
     "area": "수도권",
     "distanceKm": 6.0,
     "distanceLabel": "6",
-    "difficulty": "상",
-    "paceSec": 402,
+    "difficulty": "중",
+    "paceSec": 382,
     "riverside": false,
     "loop": true,
     "nearStation": "홍대입구역",
     "useFor": "도심+자연 시티런",
-    "note": "경의선숲길·홍제천폭포 방향 활용"
+    "note": "경의선숲길·홍제천폭포 방향 활용",
+    "lat": 37.557,
+    "lng": 126.924
   },
   {
     "id": "krc21",
@@ -349,7 +392,9 @@ export const COURSES: Course[] = [
     "loop": true,
     "nearStation": "올림픽공원역",
     "useFor": "5km 조깅, 반복주",
-    "note": "올림픽공원 외곽 5km 순환"
+    "note": "올림픽공원 외곽 5km 순환",
+    "lat": 37.52,
+    "lng": 127.121
   },
   {
     "id": "krc22",
@@ -364,7 +409,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "입문, 야경런",
-    "note": "반포한강공원~잠수교~동작대교 방향 반환 · 주의: 주말 저녁 보행자·자전거 많음"
+    "note": "반포한강공원~잠수교~동작대교 방향 반환 · 주의: 주말 저녁 보행자·자전거 많음",
+    "lat": 37.51,
+    "lng": 126.996
   },
   {
     "id": "krc23",
@@ -379,7 +426,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "입문, 거리관리",
-    "note": "호수 순환형 코스 · 주의: 저녁 산책객 많음"
+    "note": "호수 순환형 코스 · 주의: 저녁 산책객 많음",
+    "lat": 37.51,
+    "lng": 127.103
   },
   {
     "id": "krc24",
@@ -394,7 +443,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "관광런, 업다운",
-    "note": "성곽 일주 코스 · 주의: 계단·오르막 있음"
+    "note": "성곽 일주 코스 · 주의: 계단·오르막 있음",
+    "lat": 37.288,
+    "lng": 127.013
   },
   {
     "id": "krc25",
@@ -409,7 +460,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "입문, 회복주",
-    "note": "넓고 평탄한 호수 루프 · 주의: 주말 혼잡"
+    "note": "넓고 평탄한 호수 루프 · 주의: 주말 혼잡",
+    "lat": 37.658,
+    "lng": 126.77
   },
   {
     "id": "krc26",
@@ -424,7 +477,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "페이스주",
-    "note": "넓고 평평한 루프 · 주의: 여름 낮 그늘 부족"
+    "note": "넓고 평평한 루프 · 주의: 여름 낮 그늘 부족",
+    "lat": 37.566,
+    "lng": 127.193
   },
   {
     "id": "krc27",
@@ -439,7 +494,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "야경런, 입문",
-    "note": "수로와 도시 야경 코스 · 주의: 주말 산책객 많음"
+    "note": "수로와 도시 야경 코스 · 주의: 주말 산책객 많음",
+    "lat": 37.393,
+    "lng": 126.639
   },
   {
     "id": "krc28",
@@ -454,7 +511,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "호수런",
-    "note": "호수 순환형 코스 · 주의: 주말 혼잡"
+    "note": "호수 순환형 코스 · 주의: 주말 혼잡",
+    "lat": 37.535,
+    "lng": 126.651
   },
   {
     "id": "krc29",
@@ -469,7 +528,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "LSD, 장거리",
-    "note": "직선형 장거리 강변 코스 · 주의: 바람 강하면 난이도 상승"
+    "note": "직선형 장거리 강변 코스 · 주의: 바람 강하면 난이도 상승",
+    "lat": 37.567,
+    "lng": 126.745
   },
   {
     "id": "krc30",
@@ -484,7 +545,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "런트립, 입문",
-    "note": "호수 1바퀴 평지 코스 · 주의: 관광 성수기 혼잡"
+    "note": "호수 1바퀴 평지 코스 · 주의: 관광 성수기 혼잡",
+    "lat": 37.795,
+    "lng": 128.905
   },
   {
     "id": "krc31",
@@ -499,7 +562,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "바다런",
-    "note": "해안 산책로 연결 · 주의: 바람 강한 날 페이스 저하"
+    "note": "해안 산책로 연결 · 주의: 바람 강한 날 페이스 저하",
+    "lat": 37.773,
+    "lng": 128.948
   },
   {
     "id": "krc32",
@@ -514,7 +579,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "호수런, LSD",
-    "note": "호수뷰 자전거길 활용 · 주의: 자전거 동선 주의"
+    "note": "호수뷰 자전거길 활용 · 주의: 자전거 동선 주의",
+    "lat": 37.866,
+    "lng": 127.7
   },
   {
     "id": "krc33",
@@ -529,7 +596,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "런트립, 10km",
-    "note": "호수와 설악산 뷰 · 주의: 바람·관광객 주의"
+    "note": "호수와 설악산 뷰 · 주의: 바람·관광객 주의",
+    "lat": 38.197,
+    "lng": 128.586
   },
   {
     "id": "krc34",
@@ -544,7 +613,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "10km, 장거리",
-    "note": "엑스포다리~갑천변~유림공원 · 주의: 자전거 동선 주의"
+    "note": "엑스포다리~갑천변~유림공원 · 주의: 자전거 동선 주의",
+    "lat": 36.375,
+    "lng": 127.388
   },
   {
     "id": "krc35",
@@ -559,7 +630,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "입문, 조깅",
-    "note": "수목원과 시민광장 주변 · 주의: 행사일 혼잡"
+    "note": "수목원과 시민광장 주변 · 주의: 행사일 혼잡",
+    "lat": 36.367,
+    "lng": 127.388
   },
   {
     "id": "krc36",
@@ -574,7 +647,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "입문, 호수런",
-    "note": "평지 호수 조망 코스 · 주의: 주말 산책객 많음"
+    "note": "평지 호수 조망 코스 · 주의: 주말 산책객 많음",
+    "lat": 36.506,
+    "lng": 127.26
   },
   {
     "id": "krc37",
@@ -589,7 +664,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "야경런, 반복주",
-    "note": "짧은 순환형 다리 코스 · 주의: 바람 주의"
+    "note": "짧은 순환형 다리 코스 · 주의: 바람 주의",
+    "lat": 36.512,
+    "lng": 127.262
   },
   {
     "id": "krc38",
@@ -604,7 +681,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "LSD, 페이스주",
-    "note": "하천 직선형 코스 · 주의: 자전거 동선 주의"
+    "note": "하천 직선형 코스 · 주의: 자전거 동선 주의",
+    "lat": 36.636,
+    "lng": 127.48
   },
   {
     "id": "krc39",
@@ -619,7 +698,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "공원런, 관광런",
-    "note": "넓은 독립기념관 주변 · 주의: 행사일 혼잡"
+    "note": "넓은 독립기념관 주변 · 주의: 행사일 혼잡",
+    "lat": 36.785,
+    "lng": 127.213
   },
   {
     "id": "krc40",
@@ -634,7 +715,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "장거리, 페이스주",
-    "note": "도심 하천 직선형 코스 · 주의: 일부 구간 조도 확인"
+    "note": "도심 하천 직선형 코스 · 주의: 일부 구간 조도 확인",
+    "lat": 35.146,
+    "lng": 126.91
   },
   {
     "id": "krc41",
@@ -649,7 +732,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "입문, 반복주",
-    "note": "우레탄 바닥 짧은 순환 · 주의: 산책객 주의"
+    "note": "우레탄 바닥 짧은 순환 · 주의: 산책객 주의",
+    "lat": 35.152,
+    "lng": 126.847
   },
   {
     "id": "krc42",
@@ -664,7 +749,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "호수런, 회복주",
-    "note": "호수 루프 · 주의: 주말 혼잡"
+    "note": "호수 루프 · 주의: 주말 혼잡",
+    "lat": 35.13,
+    "lng": 126.87
   },
   {
     "id": "krc43",
@@ -679,7 +766,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "도심런, 입문",
-    "note": "전주천 둔치 평지 코스 · 주의: 자전거 주의"
+    "note": "전주천 둔치 평지 코스 · 주의: 자전거 주의",
+    "lat": 35.815,
+    "lng": 127.145
   },
   {
     "id": "krc44",
@@ -694,7 +783,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "입문, 회복주",
-    "note": "호수 순환형 코스 · 주의: 산책객 많음"
+    "note": "호수 순환형 코스 · 주의: 산책객 많음",
+    "lat": 35.846,
+    "lng": 127.131
   },
   {
     "id": "krc45",
@@ -709,7 +800,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "야경런, 런트립",
-    "note": "바다·해양공원·오동도 입구 · 주의: 관광객 많은 시간대 조깅만 추천"
+    "note": "바다·해양공원·오동도 입구 · 주의: 관광객 많은 시간대 조깅만 추천",
+    "lat": 34.741,
+    "lng": 127.747
   },
   {
     "id": "krc46",
@@ -724,7 +817,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "야경런, 런트립",
-    "note": "광안리 해변~민락~수영강 · 주의: 성수기 혼잡"
+    "note": "광안리 해변~민락~수영강 · 주의: 성수기 혼잡",
+    "lat": 35.153,
+    "lng": 129.118
   },
   {
     "id": "krc47",
@@ -739,7 +834,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "바다런, 관광런",
-    "note": "해변 조깅과 동백섬 업다운 · 주의: 성수기 낮 비추천"
+    "note": "해변 조깅과 동백섬 업다운 · 주의: 성수기 낮 비추천",
+    "lat": 35.158,
+    "lng": 129.16
   },
   {
     "id": "krc48",
@@ -754,7 +851,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "하프 준비, LSD",
-    "note": "온천천에서 수영강·광안리 연결 · 주의: 자전거 동선 주의"
+    "note": "온천천에서 수영강·광안리 연결 · 주의: 자전거 동선 주의",
+    "lat": 35.205,
+    "lng": 129.08
   },
   {
     "id": "krc49",
@@ -769,7 +868,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "장거리, 페이스주",
-    "note": "넓고 평지 많은 생태공원 · 주의: 여름 그늘 부족"
+    "note": "넓고 평지 많은 생태공원 · 주의: 여름 그늘 부족",
+    "lat": 35.175,
+    "lng": 128.965
   },
   {
     "id": "krc50",
@@ -784,7 +885,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "입문, 야경런",
-    "note": "수성못 순환형 평지 코스 · 주의: 주말 혼잡"
+    "note": "수성못 순환형 평지 코스 · 주의: 주말 혼잡",
+    "lat": 35.826,
+    "lng": 128.612
   },
   {
     "id": "krc51",
@@ -799,7 +902,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "장거리, 페이스주",
-    "note": "대구 도심 하천 코스 · 주의: 자전거 동선 주의"
+    "note": "대구 도심 하천 코스 · 주의: 자전거 동선 주의",
+    "lat": 35.86,
+    "lng": 128.6
   },
   {
     "id": "krc52",
@@ -814,7 +919,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "강변런, 사진",
-    "note": "금호강 강변과 디아크 뷰 · 주의: 바람 주의"
+    "note": "금호강 강변과 디아크 뷰 · 주의: 바람 주의",
+    "lat": 35.835,
+    "lng": 128.46
   },
   {
     "id": "krc53",
@@ -829,7 +936,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "정원런, 장거리",
-    "note": "태화강 강변과 국가정원 · 주의: 행사일 혼잡"
+    "note": "태화강 강변과 국가정원 · 주의: 행사일 혼잡",
+    "lat": 35.545,
+    "lng": 129.3
   },
   {
     "id": "krc54",
@@ -844,7 +953,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "바다런, 관광런",
-    "note": "바다·숲·해수욕장 연결 · 주의: 계단·관광객 주의"
+    "note": "바다·숲·해수욕장 연결 · 주의: 계단·관광객 주의",
+    "lat": 35.488,
+    "lng": 129.435
   },
   {
     "id": "krc55",
@@ -859,7 +970,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "런트립, 호수런",
-    "note": "경주 보문호수 순환 · 주의: 봄 성수기 혼잡"
+    "note": "경주 보문호수 순환 · 주의: 봄 성수기 혼잡",
+    "lat": 35.842,
+    "lng": 129.26
   },
   {
     "id": "krc56",
@@ -874,7 +987,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "입문, 회복주",
-    "note": "도심 호수 루프 · 주의: 산책객 주의"
+    "note": "도심 호수 루프 · 주의: 산책객 주의",
+    "lat": 35.227,
+    "lng": 128.685
   },
   {
     "id": "krc57",
@@ -889,7 +1004,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "해안런",
-    "note": "마산만 해안도로 라인 · 주의: 일부 차량 동선 확인"
+    "note": "마산만 해안도로 라인 · 주의: 일부 차량 동선 확인",
+    "lat": 35.196,
+    "lng": 128.566
   },
   {
     "id": "krc58",
@@ -904,7 +1021,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "런트립, 바다런",
-    "note": "제주시내·공항 접근성 좋은 해안 코스 · 주의: 바람 주의"
+    "note": "제주시내·공항 접근성 좋은 해안 코스 · 주의: 바람 주의",
+    "lat": 33.516,
+    "lng": 126.512
   },
   {
     "id": "krc59",
@@ -919,7 +1038,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "바다런, 업힐 변형",
-    "note": "해변·도두봉·해안도로 · 주의: 바람 강한 날 많음"
+    "note": "해변·도두봉·해안도로 · 주의: 바람 강한 날 많음",
+    "lat": 33.498,
+    "lng": 126.453
   },
   {
     "id": "krc60",
@@ -934,7 +1055,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "바다런, 오름런",
-    "note": "해변과 서우봉 오름 조합 · 주의: 접지 좋은 신발 추천"
+    "note": "해변과 서우봉 오름 조합 · 주의: 접지 좋은 신발 추천",
+    "lat": 33.543,
+    "lng": 126.669
   },
   {
     "id": "krc61",
@@ -949,7 +1072,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "런트립, 조깅",
-    "note": "해안 산책로 풍경 · 주의: 관광객 많아 빠른 러닝 비추천"
+    "note": "해안 산책로 풍경 · 주의: 관광객 많아 빠른 러닝 비추천",
+    "lat": 33.463,
+    "lng": 126.31
   },
   {
     "id": "krc62",
@@ -959,12 +1084,14 @@ export const COURSES: Course[] = [
     "distanceKm": 10,
     "distanceLabel": "약 10km",
     "difficulty": "하",
-    "paceSec": 358,
+    "paceSec": 360,
     "riverside": false,
     "loop": true,
     "nearStation": "기흥역",
     "useFor": "LSD, 10km, 호수런",
-    "note": "기흥호수 둘레 데크길, 평지 순환"
+    "note": "기흥호수 둘레 데크길, 평지 순환",
+    "lat": 37.246,
+    "lng": 127.103
   },
   {
     "id": "krc63",
@@ -979,7 +1106,9 @@ export const COURSES: Course[] = [
     "loop": true,
     "nearStation": "어정역",
     "useFor": "입문, 회복주, 호수런",
-    "note": "동백호수 순환, 짧은 평지"
+    "note": "동백호수 순환, 짧은 평지",
+    "lat": 37.27,
+    "lng": 127.152
   },
   {
     "id": "krc64",
@@ -989,12 +1118,14 @@ export const COURSES: Course[] = [
     "distanceKm": 3,
     "distanceLabel": "약 3km",
     "difficulty": "하",
-    "paceSec": 365,
+    "paceSec": 360,
     "riverside": false,
     "loop": false,
     "nearStation": "용인시청·용인대역",
     "useFor": "공원런, 입문",
-    "note": "용인시청 인근 공원 코스"
+    "note": "용인시청 인근 공원 코스",
+    "lat": 37.236,
+    "lng": 127.2
   },
   {
     "id": "krc65",
@@ -1004,12 +1135,14 @@ export const COURSES: Course[] = [
     "distanceKm": 8,
     "distanceLabel": "5~10km",
     "difficulty": "하",
-    "paceSec": 353,
+    "paceSec": 355,
     "riverside": true,
     "loop": false,
     "nearStation": "죽전역",
     "useFor": "LSD, 페이스주",
-    "note": "탄천 둔치 강변, 분당 방향 연장 가능"
+    "note": "탄천 둔치 강변, 분당 방향 연장 가능",
+    "lat": 37.325,
+    "lng": 127.107
   },
   {
     "id": "krc66",
@@ -1024,7 +1157,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "성복역",
     "useFor": "입문, 조깅",
-    "note": "수지 하천 산책로, 신호 없는 직선"
+    "note": "수지 하천 산책로, 신호 없는 직선",
+    "lat": 37.322,
+    "lng": 127.057
   },
   {
     "id": "krc67",
@@ -1039,7 +1174,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "다대포해수욕장역",
     "useFor": "바다런, 일몰런",
-    "note": "다대포 해변·몰운대 방면 평지"
+    "note": "다대포 해변·몰운대 방면 평지",
+    "lat": 35.046,
+    "lng": 128.967
   },
   {
     "id": "krc68",
@@ -1054,7 +1191,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "송정역",
     "useFor": "바다런, 입문",
-    "note": "송정 해변~죽도공원 해안"
+    "note": "송정 해변~죽도공원 해안",
+    "lat": 35.178,
+    "lng": 129.2
   },
   {
     "id": "krc69",
@@ -1069,7 +1208,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "경성대·부경대역",
     "useFor": "트레일런, 관광런",
-    "note": "해안 절경 트레일 · 주의: 계단·오르막 있음"
+    "note": "해안 절경 트레일 · 주의: 계단·오르막",
+    "lat": 35.13,
+    "lng": 129.122
   },
   {
     "id": "krc70",
@@ -1084,7 +1225,9 @@ export const COURSES: Course[] = [
     "loop": true,
     "nearStation": "부전역",
     "useFor": "공원런, 입문",
-    "note": "도심 공원 순환, 우레탄 구간"
+    "note": "도심 공원 순환, 우레탄 구간",
+    "lat": 35.169,
+    "lng": 129.06
   },
   {
     "id": "krc71",
@@ -1099,7 +1242,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "하단역",
     "useFor": "LSD, 페이스주",
-    "note": "낙동강변 평지 장거리, 생태공원"
+    "note": "낙동강변 평지 장거리, 생태공원",
+    "lat": 35.108,
+    "lng": 128.945
   },
   {
     "id": "krc72",
@@ -1114,7 +1259,9 @@ export const COURSES: Course[] = [
     "loop": true,
     "nearStation": "두류역·감삼역",
     "useFor": "공원런, 입문",
-    "note": "도심 공원 순환, 이월드 인근"
+    "note": "도심 공원 순환, 이월드 인근",
+    "lat": 35.853,
+    "lng": 128.564
   },
   {
     "id": "krc73",
@@ -1129,7 +1276,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "안지랑역",
     "useFor": "트레일런, 업다운",
-    "note": "앞산 자락 산책로, 완만한 오르막"
+    "note": "앞산 자락 산책로, 완만한 오르막",
+    "lat": 35.82,
+    "lng": 128.58
   },
   {
     "id": "krc74",
@@ -1144,7 +1293,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "동촌역",
     "useFor": "강변런, 조깅",
-    "note": "금호강·동촌유원지 강변 평지"
+    "note": "금호강·동촌유원지 강변 평지",
+    "lat": 35.881,
+    "lng": 128.66
   },
   {
     "id": "krc75",
@@ -1159,7 +1310,9 @@ export const COURSES: Course[] = [
     "loop": true,
     "nearStation": "",
     "useFor": "숲런, 입문",
-    "note": "수목원·숲길 순환, 제주시내 접근성"
+    "note": "수목원·숲길 순환, 제주시내 접근성",
+    "lat": 33.467,
+    "lng": 126.493
   },
   {
     "id": "krc76",
@@ -1174,7 +1327,9 @@ export const COURSES: Course[] = [
     "loop": true,
     "nearStation": "",
     "useFor": "오름런, 관광런",
-    "note": "오름 둘레 해안 조망 · 주의: 계단 일부"
+    "note": "오름 둘레 해안 조망 · 주의: 계단 일부",
+    "lat": 33.52,
+    "lng": 126.545
   },
   {
     "id": "krc77",
@@ -1189,7 +1344,9 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "런트립, 바다런",
-    "note": "서귀포 해안 절경 올레길"
+    "note": "서귀포 해안 절경 올레길",
+    "lat": 33.238,
+    "lng": 126.554
   },
   {
     "id": "krc78",
@@ -1204,6 +1361,195 @@ export const COURSES: Course[] = [
     "loop": false,
     "nearStation": "",
     "useFor": "바다런, 런트립",
-    "note": "협재~금능 해변, 비양도 뷰"
+    "note": "협재~금능 해변, 비양도 뷰",
+    "lat": 33.394,
+    "lng": 126.24
+  },
+  {
+    "id": "krc79",
+    "name": "보문산 둘레길",
+    "region": "대전",
+    "area": "충청",
+    "distanceKm": 6,
+    "distanceLabel": "5~8km",
+    "difficulty": "중",
+    "paceSec": 382,
+    "riverside": false,
+    "loop": false,
+    "nearStation": "",
+    "useFor": "트레일런, 업다운",
+    "note": "보문산 자락 산책로, 완만한 오르막",
+    "lat": 36.3,
+    "lng": 127.42
+  },
+  {
+    "id": "krc80",
+    "name": "대청호 오백리길",
+    "region": "대전",
+    "area": "충청",
+    "distanceKm": 8,
+    "distanceLabel": "5~15km",
+    "difficulty": "중",
+    "paceSec": 377,
+    "riverside": true,
+    "loop": false,
+    "nearStation": "",
+    "useFor": "LSD, 호수런",
+    "note": "대청호변 트레일, 업다운 구간",
+    "lat": 36.48,
+    "lng": 127.48
+  },
+  {
+    "id": "krc81",
+    "name": "5·18기념공원",
+    "region": "광주",
+    "area": "전라",
+    "distanceKm": 2.5,
+    "distanceLabel": "약 2.5km",
+    "difficulty": "하",
+    "paceSec": 360,
+    "riverside": false,
+    "loop": true,
+    "nearStation": "",
+    "useFor": "입문, 공원런",
+    "note": "도심 공원 순환",
+    "lat": 35.15,
+    "lng": 126.87
+  },
+  {
+    "id": "krc82",
+    "name": "광주호 호수생태원",
+    "region": "광주",
+    "area": "전라",
+    "distanceKm": 5,
+    "distanceLabel": "4~6km",
+    "difficulty": "하",
+    "paceSec": 355,
+    "riverside": true,
+    "loop": false,
+    "nearStation": "",
+    "useFor": "호수런, 조깅",
+    "note": "광주호변 생태 산책로",
+    "lat": 35.2,
+    "lng": 126.99
+  },
+  {
+    "id": "krc83",
+    "name": "강릉 남대천",
+    "region": "강원",
+    "area": "강원",
+    "distanceKm": 6,
+    "distanceLabel": "5~10km",
+    "difficulty": "하",
+    "paceSec": 355,
+    "riverside": true,
+    "loop": false,
+    "nearStation": "",
+    "useFor": "강변런, 입문",
+    "note": "남대천 둔치 평지",
+    "lat": 37.76,
+    "lng": 128.9
+  },
+  {
+    "id": "krc84",
+    "name": "속초 청초호",
+    "region": "강원",
+    "area": "강원",
+    "distanceKm": 5,
+    "distanceLabel": "4~6km",
+    "difficulty": "하",
+    "paceSec": 355,
+    "riverside": true,
+    "loop": true,
+    "nearStation": "",
+    "useFor": "호수런, 야경런",
+    "note": "청초호 순환, 바다 인접",
+    "lat": 38.2,
+    "lng": 128.59
+  },
+  {
+    "id": "krc85",
+    "name": "군산 은파호수공원",
+    "region": "전북",
+    "area": "전라",
+    "distanceKm": 4,
+    "distanceLabel": "3~6km",
+    "difficulty": "하",
+    "paceSec": 360,
+    "riverside": false,
+    "loop": true,
+    "nearStation": "",
+    "useFor": "호수런, 입문",
+    "note": "은파호수 순환, 평지",
+    "lat": 35.96,
+    "lng": 126.71
+  },
+  {
+    "id": "krc86",
+    "name": "분당 율동공원",
+    "region": "경기 성남",
+    "area": "수도권",
+    "distanceKm": 4,
+    "distanceLabel": "3~5km",
+    "difficulty": "하",
+    "paceSec": 360,
+    "riverside": false,
+    "loop": true,
+    "nearStation": "",
+    "useFor": "공원런, 입문",
+    "note": "율동공원 호수 둘레",
+    "lat": 37.36,
+    "lng": 127.123
+  },
+  {
+    "id": "krc87",
+    "name": "안산 화랑유원지",
+    "region": "경기 안산",
+    "area": "수도권",
+    "distanceKm": 5,
+    "distanceLabel": "4~6km",
+    "difficulty": "하",
+    "paceSec": 355,
+    "riverside": true,
+    "loop": true,
+    "nearStation": "",
+    "useFor": "호수런, 조깅",
+    "note": "화랑유원지 호수 순환",
+    "lat": 37.318,
+    "lng": 126.842
+  },
+  {
+    "id": "krc88",
+    "name": "진주 남강변",
+    "region": "경남",
+    "area": "경상",
+    "distanceKm": 8,
+    "distanceLabel": "5~12km",
+    "difficulty": "하",
+    "paceSec": 355,
+    "riverside": true,
+    "loop": false,
+    "nearStation": "",
+    "useFor": "강변런, LSD",
+    "note": "남강 둔치 평지, 진주성 조망",
+    "lat": 35.185,
+    "lng": 128.08
+  },
+  {
+    "id": "krc89",
+    "name": "인천대공원",
+    "region": "인천",
+    "area": "인천",
+    "distanceKm": 5,
+    "distanceLabel": "4~7km",
+    "difficulty": "하",
+    "paceSec": 360,
+    "riverside": false,
+    "loop": true,
+    "nearStation": "",
+    "useFor": "공원런, 입문",
+    "note": "인천대공원 둘레, 호수·숲",
+    "lat": 37.447,
+    "lng": 126.752
   }
 ]

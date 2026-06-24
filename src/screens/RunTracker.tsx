@@ -7,6 +7,7 @@ import RoutePath from '../components/RoutePath'
 import { GpsKalman, haversine, trackDistanceKm } from '../gps'
 import { getLocationProvider, type Fix, type LocationWatch } from '../location'
 import { COURSES, courseTimeSec, DIFFICULTY_TONE, type Course } from '../data/courses'
+import CourseMiniMap from '../components/CourseMiniMap'
 
 type Phase = 'ready' | 'run' | 'pause' | 'done'
 
@@ -310,22 +311,29 @@ export default function RunTracker({
         )}
 
         {selectedCourse && (
-          <div className="mt-5 flex items-center justify-between rounded-[6px] border border-route bg-route/5 px-3.5 py-2.5">
-            <div className="min-w-0">
-              <p className="text-[10px] font-extrabold tracking-[0.12em] text-route">선택한 코스</p>
-              <p className="truncate text-[14px] font-bold text-ink">
-                {selectedCourse.name}
-                {selectedCourse.distanceKm != null && (
-                  <span className="font-semibold text-mute"> · {selectedCourse.distanceKm}km</span>
-                )}
-              </p>
+          <div className="mt-5 rounded-[6px] border border-route bg-route/5 p-3">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold tracking-[0.12em] text-route">선택한 코스</p>
+                <p className="truncate text-[14px] font-bold text-ink">
+                  {selectedCourse.name}
+                  {selectedCourse.distanceKm != null && (
+                    <span className="font-semibold text-mute"> · {selectedCourse.distanceKm}km</span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedCourse(null)}
+                className="shrink-0 pl-3 text-[12px] font-semibold text-mute"
+              >
+                해제
+              </button>
             </div>
-            <button
-              onClick={() => setSelectedCourse(null)}
-              className="shrink-0 pl-3 text-[12px] font-semibold text-mute"
-            >
-              해제
-            </button>
+            {selectedCourse.lat != null && selectedCourse.lng != null && (
+              <div className="mt-2.5">
+                <CourseMiniMap lat={selectedCourse.lat} lng={selectedCourse.lng} />
+              </div>
+            )}
           </div>
         )}
 
