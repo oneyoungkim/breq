@@ -83,6 +83,13 @@ function WordReveal({
   )
 }
 
+function quoteSize(text: string) {
+  if (text.length > 48) return 'text-[11px]'
+  if (text.length > 42) return 'text-[12px]'
+  if (text.length > 36) return 'text-[13px]'
+  return 'text-[15px]'
+}
+
 export default function Intro({
   onDone,
   onStartRun,
@@ -96,9 +103,9 @@ export default function Intro({
     <div className="relative flex min-h-dvh flex-col items-center overflow-hidden bg-bg px-6 pb-9 pt-6">
       {/* center hero */}
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center text-center">
-        {/* GPS 마크 — 단일 히어로. 라인 드로잉이 오프닝(무드 영상 제거로 시선 집중) */}
-        <div className="club-shadow rounded-[10px] bg-ink px-8 py-7">
-          <BreqMark size={112} className="route-glow text-route" animate />
+        {/* GPS 마크 — 페이지 배경과 동일(검은 박스 제거). 라인 드로잉이 오프닝 */}
+        <div className="px-8 py-7">
+          <BreqMark size={112} className="text-route" animate />
         </div>
 
         {/* BREQ. — 라인 드로잉 완료 후 올라옴 + 수증기 */}
@@ -128,12 +135,17 @@ export default function Intro({
           </div>
         </div>
 
-        {/* 인용문 한 줄(한글 메인) — 영문 라인 제거로 군더더기 정리 */}
+        <WordReveal
+          text={quote.en}
+          className={`mt-6 w-full max-w-[360px] px-1 text-center font-extrabold leading-snug text-ink ${quoteSize(quote.en)}`}
+          baseDelay={1700}
+          stagger={65}
+        />
         <WordReveal
           text={quote.ko}
-          className="mt-6 w-full max-w-[320px] px-1 text-center text-[16px] font-bold leading-snug tracking-[-0.01em] text-ink"
-          baseDelay={1500}
-          stagger={55}
+          className="mt-2 w-full max-w-[360px] px-1 text-center text-[12px] leading-relaxed text-mute"
+          baseDelay={2100}
+          stagger={50}
         />
       </div>
 
