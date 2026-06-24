@@ -94,6 +94,7 @@ export type CertTemplate =
   | 'crew' // Crew Run
   | 'race' // Race Mode
   | 'monthly' // 월간 누적 마일리지 (PRO 전용)
+  | 'profile' // 러너 프로필 / 커리어 스탯 (PRO 전용)
 
 export type CardTheme = 'light' | 'dark' | 'blue' | 'photo'
 

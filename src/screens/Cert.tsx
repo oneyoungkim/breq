@@ -4,6 +4,7 @@ import type {
   CardTheme,
   CertTemplate,
   GeoPoint,
+  Level,
   Profile,
   RunInput,
   RunRecord,
@@ -11,6 +12,7 @@ import type {
 import { calcPace, fmtPace, hashtags } from '../logic'
 import { allRecentRuns, fmtClock, SOURCE_META } from '../runs'
 import { isPro } from '../aiCoach'
+import { myStats } from '../rankings'
 import { CREW } from '../data'
 import { Field, inputCls, SectionTitle, Toggle } from '../components/ui'
 
@@ -173,6 +175,15 @@ export interface MonthlyAgg {
   label: string // 예: 2026.06
 }
 
+export interface CareerCard {
+  name: string
+  level: Level
+  mileageKm: number
+  runCount: number
+  best5kSec: number | null
+  best10kSec: number | null
+}
+
 export type DrawOpts = {
   template: CertTemplate
   theme: CardTheme
@@ -182,6 +193,7 @@ export type DrawOpts = {
   dateStr: string
   photo: HTMLImageElement | null
   monthly: MonthlyAgg
+  career: CareerCard
 }
 
 function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
@@ -193,7 +205,7 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
   ctx.clearRect(0, 0, W, H)
   ctx.textBaseline = 'alphabetic'
 
-  const { run, paceSec, dateStr, photo, monthly } = opts
+  const { run, paceSec, dateStr, photo, monthly, career } = opts
   const pal = PALETTES[opts.theme]
   const bgTheme: CardTheme = opts.theme === 'photo' && !photo ? 'dark' : opts.theme
   paintBackground(ctx, bgTheme, photo, W, H)
@@ -826,6 +838,48 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
     }
   }
 
+  // ── 러너 프로필 / 커리어 스탯 (PRO 전용) ──
+  const tplProfile = () => {
+    header('PROFILE', pal.accent)
+    const nm = career.name || 'RUNNER'
+    const nameSize = fitSize(nm, contentW, 116)
+    ctx.font = disp(nameSize, 900)
+    ctx.fillStyle = pal.fg
+    ctx.textAlign = 'left'
+    ctx.fillText(nm, m, top + 118 * u)
+    tlabel(`LV. ${String(career.level).toUpperCase()} RUNNER`, m, top + 168 * u, {
+      size: 24,
+      color: pal.accent,
+      ls: 4,
+    })
+
+    const gy = top + 250 * u
+    hairline(gy - 34 * u)
+    const stats: [string, string, string][] = [
+      ['총 거리', career.mileageKm.toFixed(1), 'KM'],
+      ['총 러닝', String(career.runCount), 'RUNS'],
+      ['최고 5K', career.best5kSec ? fmtClock(career.best5kSec) : '--', ''],
+      ['최고 10K', career.best10kSec ? fmtClock(career.best10kSec) : '--', ''],
+    ]
+    const cw = contentW / 2
+    const rh = (bot - gy - 10 * u) / 2
+    stats.forEach((s, i) => {
+      const cxi = i % 2
+      const ryi = Math.floor(i / 2)
+      const xi = m + cxi * cw
+      const yi = gy + ryi * rh
+      tlabel(s[0], xi, yi + 34 * u, { size: 22, color: pal.dim, ls: 3 })
+      bigVal(s[1], s[2], xi, yi + 34 * u + 92 * u, { vSize: 90, uSize: 30 })
+    })
+    ctx.strokeStyle = pal.line
+    ctx.lineWidth = 1.5 * u
+    ctx.beginPath()
+    ctx.moveTo(m + cw - 26 * u, gy)
+    ctx.lineTo(m + cw - 26 * u, bot - 10 * u)
+    ctx.stroke()
+    hairline(gy + rh - 4 * u)
+  }
+
   switch (opts.template) {
     case 'minimal':
       tplMinimal()
@@ -847,6 +901,9 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
       break
     case 'monthly':
       tplMonthly()
+      break
+    case 'profile':
+      tplProfile()
       break
   }
 
@@ -941,6 +998,7 @@ const TEMPLATES: { id: CertTemplate; label: string; pro?: boolean }[] = [
   { id: 'crew', label: '크루' },
   { id: 'race', label: '레이스' },
   { id: 'monthly', label: '먼슬리 PRO', pro: true },
+  { id: 'profile', label: '프로필 PRO', pro: true },
 ]
 
 const THEMES: { id: CardTheme; label: string }[] = [
@@ -1044,9 +1102,21 @@ export default function Cert({
     }
   }, [])
 
+  const career = useMemo<CareerCard>(() => {
+    const s = myStats()
+    return {
+      name: profile.name,
+      level: profile.level,
+      mileageKm: s.mileageKm,
+      runCount: s.runCount,
+      best5kSec: s.best5kSec,
+      best10kSec: s.best10kSec,
+    }
+  }, [profile.name, profile.level])
+
   const drawOpts = useMemo<Omit<DrawOpts, 'template'>>(
-    () => ({ theme, ratio, run, paceSec, dateStr, photo, monthly }),
-    [theme, ratio, run, paceSec, dateStr, photo, monthly],
+    () => ({ theme, ratio, run, paceSec, dateStr, photo, monthly, career }),
+    [theme, ratio, run, paceSec, dateStr, photo, monthly, career],
   )
 
   useEffect(() => {

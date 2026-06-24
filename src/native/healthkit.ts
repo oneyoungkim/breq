@@ -64,7 +64,7 @@ export async function fetchRunningWorkouts(opts?: {
     startDate: start.toISOString(),
     endDate: end.toISOString(),
     includeHeartRate: true,
-    includeRoute: false,
+    includeRoute: true, // GPS 경로 좌표 포함 → 인증카드/월간 콜라주의 track으로 사용
     includeSteps: false,
   })
 
@@ -79,6 +79,18 @@ export async function fetchRunningWorkouts(opts?: {
       const avgHr = hr.length
         ? Math.round(hr.reduce((s, h) => s + h.bpm, 0) / hr.length)
         : undefined
+      // GPS 경로 — capacitor-health 버전마다 필드명이 다를 수 있어 방어적으로 매핑
+      // (lat/lng | latitude/longitude, timestamp | t | time)
+      const rawRoute = (w as { route?: Array<Record<string, unknown>> }).route
+      const track = Array.isArray(rawRoute)
+        ? rawRoute
+            .map((p) => ({
+              lat: Number(p.lat ?? p.latitude),
+              lng: Number(p.lng ?? p.longitude),
+              t: Number(p.timestamp ?? p.t ?? p.time) || Date.parse(w.startDate),
+            }))
+            .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+        : undefined
       return {
         id: w.id ?? `hk-${w.startDate}`,
         source: 'apple',
@@ -88,6 +100,7 @@ export async function fetchRunningWorkouts(opts?: {
         durationSec,
         splits: evenSplits(distanceKm, durationSec),
         avgHr,
+        track: track && track.length >= 2 ? track : undefined,
         startedAt: w.startDate,
         endedAt: w.endDate,
         energyKcal: w.calories ? Math.round(w.calories) : undefined,
