@@ -204,6 +204,15 @@ export type DrawOpts = {
     runCount: number
     mileageKm: number
   }
+  streak: {
+    daysInMonth: number
+    firstDow: number
+    active: number[]
+    count: number
+    longest: number
+    monthLabel: string
+    today: number
+  }
 }
 
 function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
@@ -215,7 +224,7 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
   ctx.clearRect(0, 0, W, H)
   ctx.textBaseline = 'alphabetic'
 
-  const { run, paceSec, dateStr, photo, monthly, career, stamps, records } = opts
+  const { run, paceSec, dateStr, photo, monthly, career, stamps, records, streak } = opts
   const pal = PALETTES[opts.theme]
   const bgTheme: CardTheme = opts.theme === 'photo' && !photo ? 'dark' : opts.theme
   paintBackground(ctx, bgTheme, photo, W, H)
@@ -966,6 +975,53 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
     })
   }
 
+  // ── 이달의 러닝 캘린더 / 스트릭 (PRO 전용) ──
+  const tplStreak = () => {
+    header(streak.monthLabel, pal.accent)
+    tlabel('이달의 러닝', m, top + 44 * u, { size: 26, color: pal.dim, ls: 2 })
+    bigVal(String(streak.count), '일', m, top + 196 * u, { vSize: 180, uSize: 54 })
+    tlabel(`최장 ${streak.longest}일 연속`, m, top + 236 * u, { size: 24, color: pal.accent, ls: 2 })
+
+    const gy = top + 306 * u
+    const cols = 7
+    const cw = contentW / cols
+    const dows = ['일', '월', '화', '수', '목', '금', '토']
+    dows.forEach((d, i) =>
+      tlabel(d, m + cw * i + cw / 2, gy, { size: 20, align: 'center', color: pal.faint, ls: 0 }),
+    )
+    const cy0 = gy + 42 * u
+    const rows = Math.ceil((streak.firstDow + streak.daysInMonth) / cols)
+    const cellH = Math.min(cw, (bot - cy0) / rows)
+    const R = Math.min(cw, cellH) / 2 - 9 * u
+    for (let day = 1; day <= streak.daysInMonth; day++) {
+      const idx = streak.firstDow + day - 1
+      const ci = idx % cols
+      const ri = Math.floor(idx / cols)
+      const dx = m + cw * ci + cw / 2
+      const dy = cy0 + cellH * ri + cellH / 2
+      const ran = streak.active.includes(day)
+      if (ran) {
+        ctx.beginPath()
+        ctx.arc(dx, dy, R, 0, Math.PI * 2)
+        ctx.fillStyle = pal.accent
+        ctx.fill()
+      } else if (day === streak.today) {
+        ctx.beginPath()
+        ctx.arc(dx, dy, R, 0, Math.PI * 2)
+        ctx.strokeStyle = pal.accent
+        ctx.lineWidth = 2.5 * u
+        ctx.stroke()
+      }
+      tlabel(String(day), dx, dy + 8 * u, {
+        size: 22,
+        align: 'center',
+        color: ran ? pal.onAccent : pal.dim,
+        ls: 0,
+        weight: ran ? 900 : 600,
+      })
+    }
+  }
+
   switch (opts.template) {
     case 'minimal':
       tplMinimal()
@@ -996,6 +1052,9 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
       break
     case 'records':
       tplRecords()
+      break
+    case 'streak':
+      tplStreak()
       break
   }
 
@@ -1093,6 +1152,7 @@ const TEMPLATES: { id: CertTemplate; label: string; pro?: boolean }[] = [
   { id: 'profile', label: '프로필 PRO', pro: true },
   { id: 'stamps', label: '도장깨기 PRO', pro: true },
   { id: 'records', label: '기록실 PRO', pro: true },
+  { id: 'streak', label: '캘린더 PRO', pro: true },
 ]
 
 const THEMES: { id: CardTheme; label: string }[] = [
@@ -1231,9 +1291,41 @@ export default function Cert({
     }
   }, [])
 
+  const streak = useMemo(() => {
+    const now = new Date()
+    const y = now.getFullYear()
+    const mo = now.getMonth()
+    const daysInMonth = new Date(y, mo + 1, 0).getDate()
+    const firstDow = new Date(y, mo, 1).getDay()
+    const set = new Set<number>()
+    allRecentRuns().forEach((r) => {
+      if (!r.startedAt) return
+      const d = new Date(r.startedAt)
+      if (d.getFullYear() === y && d.getMonth() === mo) set.add(d.getDate())
+    })
+    const days = [...set].sort((a, b) => a - b)
+    let longest = 0
+    let cur = 0
+    let prev = -99
+    for (const d of days) {
+      cur = d === prev + 1 ? cur + 1 : 1
+      longest = Math.max(longest, cur)
+      prev = d
+    }
+    return {
+      daysInMonth,
+      firstDow,
+      active: days,
+      count: set.size,
+      longest,
+      monthLabel: `${y}.${String(mo + 1).padStart(2, '0')}`,
+      today: now.getDate(),
+    }
+  }, [])
+
   const drawOpts = useMemo<Omit<DrawOpts, 'template'>>(
-    () => ({ theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps, records }),
-    [theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps, records],
+    () => ({ theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps, records, streak }),
+    [theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps, records, streak],
   )
 
   useEffect(() => {

@@ -97,6 +97,7 @@ export type CertTemplate =
   | 'profile' // 러너 프로필 / 커리어 스탯 (PRO 전용)
   | 'stamps' // 코스 도장깨기 (PRO 전용)
   | 'records' // 개인 기록실 / PB 보드 (PRO 전용)
+  | 'streak' // 이달의 러닝 캘린더 / 스트릭 (PRO 전용)
 
 export type CardTheme = 'light' | 'dark' | 'blue' | 'photo'
 
