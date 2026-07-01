@@ -196,6 +196,14 @@ export type DrawOpts = {
   monthly: MonthlyAgg
   career: CareerCard
   stamps: { done: string[]; total: number }
+  records: {
+    best5kSec: number | null
+    best10kSec: number | null
+    longestKm: number
+    fastestPaceSec: number | null
+    runCount: number
+    mileageKm: number
+  }
 }
 
 function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
@@ -207,7 +215,7 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
   ctx.clearRect(0, 0, W, H)
   ctx.textBaseline = 'alphabetic'
 
-  const { run, paceSec, dateStr, photo, monthly, career, stamps } = opts
+  const { run, paceSec, dateStr, photo, monthly, career, stamps, records } = opts
   const pal = PALETTES[opts.theme]
   const bgTheme: CardTheme = opts.theme === 'photo' && !photo ? 'dark' : opts.theme
   paintBackground(ctx, bgTheme, photo, W, H)
@@ -936,6 +944,28 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
     }
   }
 
+  // ── 개인 기록실 / PB 보드 (PRO 전용) ──
+  const tplRecords = () => {
+    header('RECORDS', pal.accent)
+    tlabel('나의 기록실', m, top + 44 * u, { size: 26, color: pal.dim, ls: 2 })
+    const rowsR: [string, string][] = [
+      ['최고 5K', records.best5kSec ? fmtClock(records.best5kSec) : '--'],
+      ['최고 10K', records.best10kSec ? fmtClock(records.best10kSec) : '--'],
+      ['최장 거리', records.longestKm > 0 ? `${records.longestKm.toFixed(2)} km` : '--'],
+      ['최고 페이스', records.fastestPaceSec ? `${fmtPace(records.fastestPaceSec)} /km` : '--'],
+      ['누적 러닝', `${records.runCount}회`],
+      ['누적 거리', `${records.mileageKm.toFixed(1)} km`],
+    ]
+    const startY = top + 116 * u
+    const rowH = (bot - startY) / rowsR.length
+    rowsR.forEach(([label, val], i) => {
+      const cy = startY + rowH * i + rowH * 0.62
+      tlabel(label, m, cy, { size: 26, color: pal.dim, ls: 2 })
+      tlabel(val, W - m, cy, { size: 46, align: 'right', color: pal.fg, ls: 0, weight: 900 })
+      if (i > 0) hairline(startY + rowH * i)
+    })
+  }
+
   switch (opts.template) {
     case 'minimal':
       tplMinimal()
@@ -963,6 +993,9 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
       break
     case 'stamps':
       tplStamps()
+      break
+    case 'records':
+      tplRecords()
       break
   }
 
@@ -1059,6 +1092,7 @@ const TEMPLATES: { id: CertTemplate; label: string; pro?: boolean }[] = [
   { id: 'monthly', label: '먼슬리 PRO', pro: true },
   { id: 'profile', label: '프로필 PRO', pro: true },
   { id: 'stamps', label: '도장깨기 PRO', pro: true },
+  { id: 'records', label: '기록실 PRO', pro: true },
 ]
 
 const THEMES: { id: CardTheme; label: string }[] = [
@@ -1180,9 +1214,26 @@ export default function Cert({
     return { done, total: COURSES.length }
   }, [])
 
+  const records = useMemo(() => {
+    const runs = allRecentRuns().filter((r) => r.distanceKm > 0 && r.durationSec > 0)
+    const s = myStats()
+    const longestKm = runs.reduce((mx, r) => Math.max(mx, r.distanceKm), 0)
+    const fastestPaceSec = runs.length
+      ? Math.min(...runs.map((r) => r.durationSec / r.distanceKm))
+      : null
+    return {
+      best5kSec: s.best5kSec,
+      best10kSec: s.best10kSec,
+      longestKm,
+      fastestPaceSec,
+      runCount: s.runCount,
+      mileageKm: s.mileageKm,
+    }
+  }, [])
+
   const drawOpts = useMemo<Omit<DrawOpts, 'template'>>(
-    () => ({ theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps }),
-    [theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps],
+    () => ({ theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps, records }),
+    [theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps, records],
   )
 
   useEffect(() => {
