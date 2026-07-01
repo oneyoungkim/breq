@@ -13,6 +13,7 @@ import { calcPace, fmtPace, hashtags } from '../logic'
 import { allRecentRuns, fmtClock, SOURCE_META } from '../runs'
 import { isPro } from '../aiCoach'
 import { myStats } from '../rankings'
+import { COURSES } from '../data/courses'
 import { CREW } from '../data'
 import { Field, inputCls, SectionTitle, Toggle } from '../components/ui'
 
@@ -194,6 +195,7 @@ export type DrawOpts = {
   photo: HTMLImageElement | null
   monthly: MonthlyAgg
   career: CareerCard
+  stamps: { done: string[]; total: number }
 }
 
 function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
@@ -205,7 +207,7 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
   ctx.clearRect(0, 0, W, H)
   ctx.textBaseline = 'alphabetic'
 
-  const { run, paceSec, dateStr, photo, monthly, career } = opts
+  const { run, paceSec, dateStr, photo, monthly, career, stamps } = opts
   const pal = PALETTES[opts.theme]
   const bgTheme: CardTheme = opts.theme === 'photo' && !photo ? 'dark' : opts.theme
   paintBackground(ctx, bgTheme, photo, W, H)
@@ -880,6 +882,60 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
     hairline(gy + rh - 4 * u)
   }
 
+  // ── 코스 도장깨기 (PRO 전용) — 정복한 추천 코스 수집 진행도 ──
+  const tplStamps = () => {
+    header('STAMPS', pal.accent)
+    tlabel('코스 도장깨기', m, top + 44 * u, { size: 26, color: pal.dim, ls: 2 })
+    bigVal(`${stamps.done.length}`, `/ ${stamps.total} 코스`, m, top + 210 * u, {
+      vSize: 200,
+      uSize: 46,
+    })
+    tlabel('정복한 러닝 코스', m, top + 250 * u, { size: 22, color: pal.faint, ls: 3 })
+
+    const gy = top + 316 * u
+    const cols = 12
+    const gap = 14 * u
+    const dot = (contentW - gap * (cols - 1)) / cols
+    const rows = Math.ceil(stamps.total / cols)
+    for (let i = 0; i < stamps.total; i++) {
+      const cxi = i % cols
+      const ryi = Math.floor(i / cols)
+      const dx = m + cxi * (dot + gap) + dot / 2
+      const dy = gy + ryi * (dot + gap) + dot / 2
+      ctx.beginPath()
+      ctx.arc(dx, dy, dot / 2, 0, Math.PI * 2)
+      if (i < stamps.done.length) {
+        ctx.fillStyle = pal.accent
+        ctx.fill()
+      } else {
+        ctx.strokeStyle = pal.line
+        ctx.lineWidth = 2 * u
+        ctx.stroke()
+      }
+    }
+
+    const listY = gy + rows * (dot + gap) + 30 * u
+    if (stamps.done.length === 0) {
+      tlabel('추천 코스를 골라 달리면 도장이 찍혀요', cx, listY + 20 * u, {
+        size: 22,
+        align: 'center',
+        color: pal.faint,
+        ls: 1,
+      })
+    } else {
+      hairline(listY - 12 * u)
+      stamps.done.slice(0, 6).forEach((nm, i) => {
+        tlabel(`· ${nm}`, m, listY + 30 * u + i * 42 * u, { size: 22, color: pal.dim, ls: 1 })
+      })
+      if (stamps.done.length > 6)
+        tlabel(`외 ${stamps.done.length - 6}개`, m, listY + 30 * u + 6 * 42 * u, {
+          size: 20,
+          color: pal.faint,
+          ls: 1,
+        })
+    }
+  }
+
   switch (opts.template) {
     case 'minimal':
       tplMinimal()
@@ -904,6 +960,9 @@ function drawCard(canvas: HTMLCanvasElement, opts: DrawOpts) {
       break
     case 'profile':
       tplProfile()
+      break
+    case 'stamps':
+      tplStamps()
       break
   }
 
@@ -999,6 +1058,7 @@ const TEMPLATES: { id: CertTemplate; label: string; pro?: boolean }[] = [
   { id: 'race', label: '레이스' },
   { id: 'monthly', label: '먼슬리 PRO', pro: true },
   { id: 'profile', label: '프로필 PRO', pro: true },
+  { id: 'stamps', label: '도장깨기 PRO', pro: true },
 ]
 
 const THEMES: { id: CardTheme; label: string }[] = [
@@ -1114,9 +1174,15 @@ export default function Cert({
     }
   }, [profile.name, profile.level])
 
+  const stamps = useMemo(() => {
+    const ran = new Set(allRecentRuns().map((r) => r.course).filter(Boolean))
+    const done = COURSES.filter((c) => ran.has(c.name)).map((c) => c.name)
+    return { done, total: COURSES.length }
+  }, [])
+
   const drawOpts = useMemo<Omit<DrawOpts, 'template'>>(
-    () => ({ theme, ratio, run, paceSec, dateStr, photo, monthly, career }),
-    [theme, ratio, run, paceSec, dateStr, photo, monthly, career],
+    () => ({ theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps }),
+    [theme, ratio, run, paceSec, dateStr, photo, monthly, career, stamps],
   )
 
   useEffect(() => {
